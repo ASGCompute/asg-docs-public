@@ -1,0 +1,26 @@
+# Public Documentation Ownership
+# Changes to these paths require review from designated owners
+
+# OpenAPI specification - security-sensitive
+/openapi/*                    @ASGCompute/security @ASGCompute/cto
+
+# Security documentation
+/security/*                   @ASGCompute/security
+
+# Billing and payments documentation
+/billing/*                    @ASGCompute/cto @ASGCompute/billing
+
+# Authentication documentation
+/auth/*                       @ASGCompute/security @ASGCompute/cto
+
+# API reference pages
+/api/*                        @ASGCompute/cto
+
+# CI/CD workflows
+/.github/                     @ASGCompute/cto @ASGCompute/security
+
+# Mintlify configuration
+mint.json                     @ASGCompute/cto
+
+# Leak banlist - critical for white-label compliance
+.leak-banlist.txt             @ASGCompute/security @ASGCompute/cto
