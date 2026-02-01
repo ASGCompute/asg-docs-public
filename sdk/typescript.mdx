@@ -1,0 +1,147 @@
+---
+title: "TypeScript SDK"
+description: "Official TypeScript SDK for ASG Agent Cloud"
+---
+
+# TypeScript SDK
+
+The official SDK for integrating ASG Agent Cloud into your TypeScript/JavaScript applications.
+
+## Installation
+
+```bash
+npm install @asgcompute/sdk
+```
+
+## Quick Start
+
+```typescript
+import { ASGClient } from '@asgcompute/sdk';
+import { Keypair } from '@solana/web3.js';
+
+// Initialize client
+const client = new ASGClient({
+  endpoint: 'https://agent.asgcompute.com/mcp',
+  wallet: Keypair.fromSecretKey(yourSecretKey),
+  network: 'mainnet' // or 'devnet'
+});
+
+// Call a tool
+const response = await client.callTool('inference_chat', {
+  model: 'asg-fast',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+
+console.log(response.result.content);
+```
+
+## Configuration
+
+```typescript
+const client = new ASGClient({
+  endpoint: string;          // Gateway URL
+  wallet: Keypair;           // Solana wallet
+  network: 'mainnet' | 'devnet';
+  timeout?: number;          // Request timeout (ms)
+  retries?: number;          // Auto-retry count
+});
+```
+
+## Core Methods
+
+### `listTools()`
+
+List all available tools.
+
+```typescript
+const tools = await client.listTools();
+// [{ name: 'inference_chat', description: ... }, ...]
+```
+
+### `callTool(name, arguments)`
+
+Execute a tool with automatic payment handling.
+
+```typescript
+const result = await client.callTool('sandbox_execute', {
+  language: 'python',
+  code: 'print("Hello!")'
+});
+```
+
+### `getQuote(name, arguments)`
+
+Get a price quote without executing.
+
+```typescript
+const quote = await client.getQuote('gpu_provision', {
+  gpu_type: 'RTX_4090',
+  ttl_seconds: 3600
+});
+
+console.log(`Cost: $${quote.amount_usdc / 1_000_000}`);
+```
+
+### `getReceipt(receiptId)`
+
+Retrieve a receipt by ID.
+
+```typescript
+const receipt = await client.getReceipt('rcpt_abc123');
+console.log(`Charged: ${receipt.debited_usdc_microusd}`);
+```
+
+## Streaming
+
+```typescript
+const stream = await client.callTool('inference_chat', {
+  model: 'asg-fast',
+  messages: [{ role: 'user', content: 'Write a poem' }],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content);
+}
+```
+
+## Error Handling
+
+```typescript
+import { ASGError, QuoteExpiredError, BudgetExceededError } from '@asgcompute/sdk';
+
+try {
+  await client.callTool('inference_chat', { ... });
+} catch (error) {
+  if (error instanceof QuoteExpiredError) {
+    // Quote expired, retry
+  } else if (error instanceof BudgetExceededError) {
+    // Budget limit hit
+  } else if (error instanceof ASGError) {
+    console.error(`ASG Error ${error.code}: ${error.message}`);
+  }
+}
+```
+
+## TypeScript Types
+
+```typescript
+import type { 
+  Tool, 
+  Quote, 
+  Receipt, 
+  InferenceChatArgs,
+  GpuProvisionArgs 
+} from '@asgcompute/sdk';
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Examples" icon="code" href="/sdk/examples">
+    Full working examples
+  </Card>
+  <Card title="API Reference" icon="file-code" href="/api/overview">
+    Complete API documentation
+  </Card>
+</CardGroup>

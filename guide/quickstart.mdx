@@ -1,0 +1,151 @@
+---
+title: "Quickstart"
+description: "Call your first ASG tool in under 5 minutes"
+---
+
+# Quickstart
+
+Get started with ASG Agent Cloud in just a few steps. No registration required.
+
+## Prerequisites
+
+- A Solana wallet with USDC (devnet for testing)
+- Node.js 18+ or Python 3.10+
+
+## Step 1: Connect via MCP
+
+ASG Agent Cloud uses the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) for agent communication.
+
+<CodeGroup>
+
+```bash curl
+# List available tools
+curl -X POST https://agent.asgcompute.com/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  }'
+```
+
+```typescript TypeScript
+import { MCPClient } from '@asgcompute/sdk';
+
+const client = new MCPClient({
+  endpoint: 'https://agent.asgcompute.com/mcp'
+});
+
+const tools = await client.listTools();
+console.log(tools);
+```
+
+</CodeGroup>
+
+## Step 2: Get a Quote (402 Challenge)
+
+When you call a paid tool without payment, you'll receive a `402 Payment Required` response with pricing:
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://agent.asgcompute.com/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "inference_chat",
+      "arguments": {
+        "model": "asg-fast",
+        "messages": [{"role": "user", "content": "Hello!"}]
+      }
+    }
+  }'
+```
+
+```json Response (402)
+{
+  "error": {
+    "code": 402,
+    "message": "Payment Required",
+    "data": {
+      "quote_id": "abc123",
+      "amount_usdc_microusd": 10000,
+      "min_charge_usdc_microusd": 10000,
+      "expires_at": "2026-02-01T12:00:00Z",
+      "pay_to": "USDC payment address"
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+## Step 3: Pay with USDC
+
+Send the quoted amount to the payment address. ASG covers all transaction fees (gasless).
+
+<Tip>
+**Gasless Payments**: You only need USDC in your wallet — no SOL required for transaction fees.
+</Tip>
+
+## Step 4: Execute with Payment Proof
+
+Include your payment signature to execute the tool:
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://agent.asgcompute.com/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "inference_chat",
+      "arguments": {
+        "model": "asg-fast",
+        "messages": [{"role": "user", "content": "Hello!"}]
+      },
+      "_meta": {
+        "payment": {
+          "tx_signature": "<your-solana-tx-signature>"
+        }
+      }
+    }
+  }'
+```
+
+```json Response (200)
+{
+  "result": {
+    "content": "Hello! How can I help you today?",
+    "_meta": {
+      "receipt_id": "receipt_xyz",
+      "debited_usdc_microusd": 8500
+    }
+  }
+}
+```
+
+</CodeGroup>
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="Core Concepts" icon="book" href="/guide/concepts">
+    Learn about Runs, Steps, Budgets, and Receipts
+  </Card>
+  <Card title="All Services" icon="grid" href="/services/inference">
+    Explore Inference, Serverless, GPU, and Sandbox
+  </Card>
+  <Card title="SDK Reference" icon="code" href="/sdk/typescript">
+    TypeScript SDK documentation
+  </Card>
+  <Card title="Pricing" icon="credit-card" href="/billing/pricing">
+    Detailed pricing for all services
+  </Card>
+</CardGroup>

@@ -1,0 +1,418 @@
+openapi: 3.1.0
+info:
+  title: ASG Agent Cloud API
+  version: "v5.1.0"
+  description: |
+    Public API for ASG Agent Cloud — agent-native infrastructure with MCP protocol and gasless USDC payments.
+    
+    ## Authentication
+    All requests require Bearer authentication via Solana wallet signature.
+    
+    ## Payment Flow
+    1. Call tool without payment → Receive 402 with quote
+    2. Pay USDC on Solana
+    3. Retry with payment signature → Receive result + receipt
+  contact:
+    name: ASG Support
+    email: support@asgcompute.com
+  license:
+    name: Proprietary
+    url: https://asgcompute.com/terms
+
+servers:
+  - url: https://agent.asgcompute.com
+    description: Production
+
+tags:
+  - name: Health
+    description: Service health endpoints
+  - name: MCP
+    description: Model Context Protocol tool execution
+  - name: Receipts
+    description: Payment receipts and history
+  - name: Runs
+    description: Execution run management
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Solana wallet signature token
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: ASG error code
+          examples:
+            - QUOTE_EXPIRED
+            - PAYMENT_REQUIRED
+            - BUDGET_EXCEEDED
+            - RATE_LIMITED
+        message:
+          type: string
+          description: Human-readable error message
+        request_id:
+          type: string
+          description: Request ID for debugging
+
+    Quote:
+      type: object
+      properties:
+        quote_id:
+          type: string
+          description: Unique quote identifier
+        amount_usdc_microusd:
+          type: integer
+          description: Price in microusd (1/1,000,000 USD)
+        min_charge_usdc_microusd:
+          type: integer
+          description: Minimum charge amount
+        expires_at:
+          type: string
+          format: date-time
+          description: Quote expiration time (RFC3339)
+
+    Receipt:
+      type: object
+      properties:
+        receipt_id:
+          type: string
+          description: Unique receipt identifier
+        step_id:
+          type: string
+        run_id:
+          type: string
+        tool:
+          type: string
+          description: Tool that was executed
+        quoted_usdc_microusd:
+          type: integer
+        debited_usdc_microusd:
+          type: integer
+        refunded_usdc_microusd:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    ToolCallRequest:
+      type: object
+      required:
+        - jsonrpc
+        - id
+        - method
+        - params
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        method:
+          type: string
+          enum:
+            - tools/list
+            - tools/call
+        params:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Tool name
+              examples:
+                - inference_chat
+                - serverless_invoke
+                - gpu_provision
+                - sandbox_execute
+            arguments:
+              type: object
+              description: Tool-specific arguments
+            _meta:
+              type: object
+              properties:
+                payment:
+                  type: object
+                  properties:
+                    tx_signature:
+                      type: string
+                      description: Solana transaction signature
+
+    ToolCallResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        result:
+          type: object
+          properties:
+            content:
+              description: Tool output
+            _meta:
+              type: object
+              properties:
+                receipt_id:
+                  type: string
+                debited_usdc_microusd:
+                  type: integer
+
+    PaymentRequiredResponse:
+      type: object
+      properties:
+        jsonrpc:
+          type: string
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        error:
+          type: object
+          properties:
+            code:
+              type: integer
+              enum: [402]
+            message:
+              type: string
+              enum: ["Payment Required"]
+            data:
+              $ref: "#/components/schemas/Quote"
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns service health status. No authentication required.
+      security: []
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  version:
+                    type: string
+
+  /mcp:
+    post:
+      tags: [MCP]
+      summary: Execute MCP tool call
+      description: |
+        Execute a tool through the MCP gateway. If no payment is provided,
+        returns 402 with a quote. Include payment signature to execute.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToolCallRequest"
+            examples:
+              list_tools:
+                summary: List available tools
+                value:
+                  jsonrpc: "2.0"
+                  id: 1
+                  method: tools/list
+              call_inference:
+                summary: Call inference tool
+                value:
+                  jsonrpc: "2.0"
+                  id: 2
+                  method: tools/call
+                  params:
+                    name: inference_chat
+                    arguments:
+                      model: asg-fast
+                      messages:
+                        - role: user
+                          content: Hello
+      responses:
+        "200":
+          description: Tool executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolCallResponse"
+        "402":
+          description: Payment required - quote returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentRequiredResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /receipts:
+    get:
+      tags: [Receipts]
+      summary: List receipts
+      description: Returns paginated list of receipts for the authenticated wallet.
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of receipts to return
+        - in: query
+          name: cursor
+          schema:
+            type: string
+          description: Pagination cursor
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [finalized, pending, refunded]
+          description: Filter by status
+      responses:
+        "200":
+          description: Receipt list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  receipts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Receipt"
+                  next_cursor:
+                    type: string
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /receipts/{receipt_id}:
+    get:
+      tags: [Receipts]
+      summary: Get receipt by ID
+      description: Returns a single receipt by its ID.
+      parameters:
+        - in: path
+          name: receipt_id
+          required: true
+          schema:
+            type: string
+          description: Receipt identifier
+      responses:
+        "200":
+          description: Receipt found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "404":
+          description: Receipt not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /runs:
+    get:
+      tags: [Runs]
+      summary: List runs
+      description: Returns paginated list of runs for the authenticated wallet.
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, completed, cancelled]
+      responses:
+        "200":
+          description: Run list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  runs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        run_id:
+                          type: string
+                        status:
+                          type: string
+                        budget_usdc_microusd:
+                          type: integer
+                        spent_usdc_microusd:
+                          type: integer
+                        created_at:
+                          type: string
+                          format: date-time
+        "401":
+          description: Unauthorized
+
+  /runs/{run_id}:
+    get:
+      tags: [Runs]
+      summary: Get run by ID
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run found
+        "404":
+          description: Run not found

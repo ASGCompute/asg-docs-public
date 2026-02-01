@@ -1,0 +1,123 @@
+---
+title: "ASG Sandbox"
+description: "Isolated code execution environment"
+---
+
+# ASG Sandbox
+
+Execute untrusted code safely in isolated environments.
+
+## Overview
+
+ASG Sandbox provides:
+- **Python & JavaScript** — Popular languages
+- **Full isolation** — Secure execution
+- **Package support** — pip/npm packages
+- **File access** — Read/write temporary files
+
+## Quick Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://agent.asgcompute.com/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "sandbox_execute",
+      "arguments": {
+        "language": "python",
+        "code": "import math\nprint(math.sqrt(144))"
+      },
+      "_meta": {
+        "payment": {"tx_signature": "<your-signature>"}
+      }
+    }
+  }'
+```
+
+```typescript TypeScript
+const result = await client.callTool('sandbox_execute', {
+  language: 'python',
+  code: `
+import math
+print(math.sqrt(144))
+  `
+});
+
+console.log(result.stdout); // "12.0"
+```
+
+</CodeGroup>
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|:----------|:-----|:---------|:------------|
+| `language` | string | Yes | `python` or `javascript` |
+| `code` | string | Yes | Code to execute |
+| `timeout_seconds` | number | No | Max execution time (default: 30) |
+| `packages` | array | No | Packages to install |
+
+## Languages
+
+| Language | Version | Pre-installed |
+|:---------|:--------|:--------------|
+| `python` | 3.11 | numpy, pandas, requests, pillow |
+| `javascript` | Node 18 | axios, lodash, dayjs |
+
+## Response
+
+```json
+{
+  "result": {
+    "stdout": "12.0\n",
+    "stderr": "",
+    "exit_code": 0,
+    "duration_ms": 156,
+    "_meta": {
+      "receipt_id": "rcpt_sbox789",
+      "debited_usdc_microusd": 2500
+    }
+  }
+}
+```
+
+## Installing Packages
+
+```typescript
+const result = await client.callTool('sandbox_execute', {
+  language: 'python',
+  packages: ['beautifulsoup4', 'lxml'],
+  code: `
+from bs4 import BeautifulSoup
+html = "<h1>Hello</h1>"
+soup = BeautifulSoup(html, 'lxml')
+print(soup.h1.text)
+  `
+});
+```
+
+## Security
+
+<Warning>
+**Isolation:** All sandbox executions run in isolated environments with:
+- No network access (except allowlisted domains)
+- No persistent storage
+- Memory and CPU limits
+- Automatic termination on timeout
+</Warning>
+
+## Use Cases
+
+- **Code execution** — Run user-submitted code safely
+- **Data analysis** — Process data with Python libraries
+- **Prototyping** — Test code snippets quickly
+- **Agent tools** — Give agents code execution capability
+
+## Pricing
+
+See [Pricing](/billing/pricing) for execution rates.

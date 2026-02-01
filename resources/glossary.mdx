@@ -1,0 +1,71 @@
+---
+title: "Glossary"
+description: "ASG terminology reference"
+---
+
+# Glossary
+
+Key terms and concepts used in ASG Agent Cloud.
+
+## A
+
+### Agent
+An autonomous AI system that can call tools, make decisions, and execute tasks without continuous human intervention.
+
+## B
+
+### Budget
+Maximum spend limit for a Run or Step. Prevents runaway costs.
+
+## G
+
+### Gasless
+Payment model where ASG covers Solana transaction fees. Users only need USDC.
+
+## I
+
+### Idempotency Key
+Unique identifier ensuring a request is processed only once, even if retried.
+
+## L
+
+### Lease
+A timed allocation of GPU resources. Requires heartbeat to maintain.
+
+## M
+
+### MCP (Model Context Protocol)
+Standard protocol for agent-to-service communication. Used by ASG for all tool interactions.
+
+### microusd
+1/1,000,000 of a USD. ASG uses microusd for precise billing.
+- 1 USD = 1,000,000 microusd
+- $0.01 = 10,000 microusd
+
+## Q
+
+### Quote
+A price commitment for a specific request with an expiration time.
+
+## R
+
+### Receipt
+Proof of completed work, including actual cost and refund (if any).
+
+### Run
+Container for related work. Has a budget, TTL, and contains Steps.
+
+## S
+
+### Step
+Single tool execution within a Run. Generates one Receipt.
+
+## T
+
+### TTL (Time-to-Live)
+Expiration time for resources (quotes, leases, runs).
+
+## U
+
+### USDC
+USD Coin — the stablecoin used for all ASG payments on Solana.

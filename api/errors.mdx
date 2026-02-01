@@ -1,0 +1,104 @@
+---
+title: "Error Codes"
+description: "ASG error code reference"
+---
+
+# Error Codes
+
+Complete reference for ASG Agent Cloud error codes.
+
+## HTTP Status Codes
+
+| Code | Meaning |
+|:-----|:--------|
+| **200** | Success |
+| **400** | Bad Request |
+| **401** | Unauthorized |
+| **402** | Payment Required |
+| **404** | Not Found |
+| **429** | Rate Limited |
+| **500** | Internal Error |
+
+## ASG Error Codes
+
+### Payment Errors
+
+| Code | Message | Resolution |
+|:-----|:--------|:-----------|
+| `PAYMENT_REQUIRED` | No payment provided | Include payment signature |
+| `QUOTE_EXPIRED` | Quote has expired | Request new quote |
+| `PAYMENT_INSUFFICIENT` | Amount below quote | Pay full quoted amount |
+| `PAYMENT_INVALID` | Invalid signature | Check transaction signature |
+| `WALLET_MISMATCH` | Wrong sender wallet | Pay from authorized wallet |
+
+### Budget Errors
+
+| Code | Message | Resolution |
+|:-----|:--------|:-----------|
+| `BUDGET_EXCEEDED` | Run/step budget exceeded | Increase budget or start new run |
+| `QUOTA_EXCEEDED` | Account quota exceeded | Contact support |
+
+### Execution Errors
+
+| Code | Message | Resolution |
+|:-----|:--------|:-----------|
+| `TOOL_NOT_FOUND` | Unknown tool name | Check `tools/list` |
+| `INVALID_ARGUMENTS` | Bad tool arguments | Check tool schema |
+| `EXECUTION_TIMEOUT` | Execution timed out | Reduce workload or increase TTL |
+| `EXECUTION_FAILED` | Tool execution failed | Check logs, retry |
+
+### Resource Errors
+
+| Code | Message | Resolution |
+|:-----|:--------|:-----------|
+| `GPU_UNAVAILABLE` | No GPUs available | Wait and retry |
+| `LEASE_EXPIRED` | GPU lease expired | Provision new pod |
+| `LEASE_NOT_FOUND` | Unknown lease ID | Check lease ID |
+
+### Rate Limiting
+
+| Code | Message | Resolution |
+|:-----|:--------|:-----------|
+| `RATE_LIMITED` | Too many requests | Wait and retry |
+| `CONCURRENT_LIMIT` | Too many concurrent | Wait for completion |
+
+## Error Response Format
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": -32000,
+    "message": "ASG Error",
+    "data": {
+      "asg_code": "QUOTE_EXPIRED",
+      "details": "Quote expired at 2026-02-01T12:00:00Z"
+    }
+  }
+}
+```
+
+## Handling Errors
+
+```typescript
+try {
+  await client.callTool('inference_chat', { ... });
+} catch (error) {
+  switch (error.data?.asg_code) {
+    case 'QUOTE_EXPIRED':
+      // Retry with fresh quote
+      break;
+    case 'RATE_LIMITED':
+      // Wait and retry
+      await sleep(error.data.retry_after * 1000);
+      break;
+    case 'BUDGET_EXCEEDED':
+      // Start new run or increase budget
+      break;
+    default:
+      // Log and escalate
+      console.error(error);
+  }
+}
+```

@@ -1,0 +1,159 @@
+---
+title: "SDK Examples"
+description: "Working examples with the ASG SDK"
+---
+
+# SDK Examples
+
+Practical examples for common use cases.
+
+## Basic Inference
+
+```typescript
+import { ASGClient } from '@asgcompute/sdk';
+
+const client = new ASGClient({ ... });
+
+// Simple completion
+const response = await client.callTool('inference_chat', {
+  model: 'asg-fast',
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'What is the capital of France?' }
+  ]
+});
+
+console.log(response.result.content);
+// "The capital of France is Paris."
+```
+
+## Multi-turn Conversation
+
+```typescript
+const messages = [];
+
+async function chat(userMessage: string) {
+  messages.push({ role: 'user', content: userMessage });
+  
+  const response = await client.callTool('inference_chat', {
+    model: 'asg-balanced',
+    messages
+  });
+  
+  messages.push({ role: 'assistant', content: response.result.content });
+  return response.result.content;
+}
+
+await chat("Hi, I'm learning TypeScript.");
+await chat("What's the difference between type and interface?");
+```
+
+## Code Execution
+
+```typescript
+// Execute Python code safely
+const result = await client.callTool('sandbox_execute', {
+  language: 'python',
+  code: `
+import json
+data = {"users": 100, "active": 85}
+print(json.dumps(data, indent=2))
+  `
+});
+
+console.log(result.result.stdout);
+```
+
+## GPU Workflow
+
+```typescript
+// Provision → Use → Terminate
+const pod = await client.callTool('gpu_provision', {
+  gpu_type: 'RTX_4090',
+  ttl_seconds: 3600
+});
+
+console.log(`Pod ready at: ${pod.result.endpoint}`);
+
+// Do your GPU work...
+// await runTrainingJob(pod.result.endpoint);
+
+// Extend if needed
+await client.callTool('gpu_heartbeat', {
+  lease_id: pod.result.lease_id,
+  extend_seconds: 1800
+});
+
+// Terminate when done
+await client.callTool('gpu_terminate', {
+  lease_id: pod.result.lease_id
+});
+```
+
+## Batch Processing
+
+```typescript
+// Process items with concurrency control
+async function processBatch(items: string[]) {
+  const results = [];
+  const concurrency = 3;
+  
+  for (let i = 0; i < items.length; i += concurrency) {
+    const batch = items.slice(i, i + concurrency);
+    const promises = batch.map(item => 
+      client.callTool('inference_chat', {
+        model: 'asg-fast',
+        messages: [{ role: 'user', content: `Summarize: ${item}` }]
+      })
+    );
+    results.push(...await Promise.all(promises));
+  }
+  
+  return results;
+}
+```
+
+## Budget Protection
+
+```typescript
+// Track spending within a budget
+let totalSpent = 0;
+const budget = 5_000_000; // $5 in microusd
+
+async function safeTool(name: string, args: object) {
+  // Get quote first
+  const quote = await client.getQuote(name, args);
+  
+  if (totalSpent + quote.amount_usdc_microusd > budget) {
+    throw new Error('Budget would be exceeded');
+  }
+  
+  // Execute if within budget
+  const result = await client.callTool(name, args);
+  totalSpent += result._meta.debited_usdc_microusd;
+  
+  return result;
+}
+```
+
+## Error Recovery
+
+```typescript
+async function reliableTool(name: string, args: object, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await client.callTool(name, args);
+    } catch (error) {
+      if (error.code === 'QUOTE_EXPIRED') {
+        continue; // Retry with fresh quote
+      }
+      if (error.code === 'RATE_LIMITED') {
+        await sleep(1000 * (attempt + 1));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+```

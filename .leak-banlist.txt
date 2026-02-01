@@ -1,0 +1,77 @@
+# White-Label Leak Banlist
+# Patterns that must NEVER appear in public documentation
+# Used by CI to block PRs with sensitive content
+
+# Vendor Names (providers)
+openrouter
+runpod
+modal.com
+e2b.dev
+anthropic
+openai.com
+together.ai
+fireworks.ai
+replicate
+huggingface
+
+# Internal Domains
+fly.dev
+fly.io
+-dev.
+-staging.
+-internal.
+supabase.co
+supabase.com
+postgres://
+postgresql://
+
+# Environment Markers
+asg-gateway-dev
+asg-billing-dev
+asg-control-dev
+asg-.*-dev
+asg-.*-staging
+
+# Secret Patterns
+TREASURY_
+WALLET_ADDRESS
+DATABASE_URL
+OPENROUTER_API
+MODAL_TOKEN
+E2B_API
+RUNPOD_API
+SUPABASE_
+PRIVATE_KEY
+SECRET_KEY
+
+# Internal Infra
+kill.switch
+kill_switch
+killswitch
+KILL_
+
+# Payment Internals
+memo_format
+payment_memo
+nonce_scheme
+
+# Database Schema
+usdc_ledger
+gpu_leases
+usage_events
+billing_tables
+
+# Fly App Names
+asg-gateway
+asg-billing-plane
+asg-control-plane
+
+# Treasury (never expose)
+treasury
+USDC_MINT
+token_program
+
+# Internal Hostnames
+internal.asg
+admin.asg
+ops.asg

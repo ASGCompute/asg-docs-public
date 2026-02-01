@@ -1,0 +1,21 @@
+{
+    "name": "asg-docs",
+    "version": "1.0.0",
+    "private": true,
+    "description": "ASG Agent Cloud Documentation",
+    "scripts": {
+        "dev": "mintlify dev",
+        "build": "mintlify build",
+        "preview": "mintlify preview",
+        "lint:openapi": "redocly lint openapi/public.openapi.yaml",
+        "lint:links": "mintlify broken-links",
+        "scan:leaks": "bash -c 'while IFS= read -r p || [[ -n \"$p\" ]]; do [[ \"$p\" =~ ^#.*$ ]] && continue; [[ -z \"$p\" ]] && continue; if grep -rniI -- \"$p\" . --include=\"*.md\" --include=\"*.mdx\" --include=\"*.yaml\" 2>/dev/null | grep -v \".leak-banlist.txt\"; then echo \"FOUND: $p\"; fi; done < .leak-banlist.txt'"
+    },
+    "devDependencies": {
+        "@redocly/cli": "^1.0.0",
+        "mintlify": "^4.0.0"
+    },
+    "engines": {
+        "node": ">=18"
+    }
+}

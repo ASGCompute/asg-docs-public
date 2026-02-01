@@ -1,0 +1,108 @@
+---
+title: "Architecture"
+description: "High-level system architecture"
+---
+
+# Architecture
+
+ASG Agent Cloud is designed for reliability, scale, and security.
+
+## System Overview
+
+```mermaid
+flowchart TB
+    subgraph Clients
+        Agent[Your Agent]
+        SDK[ASG SDK]
+    end
+    
+    subgraph ASG["ASG Agent Cloud"]
+        Gateway[Gateway]
+        Billing[Billing Service]
+        Control[Control Plane]
+    end
+    
+    subgraph Compute["Compute Layer"]
+        Inference[Inference]
+        Serverless[Serverless]
+        GPU[GPU Pods]
+        Sandbox[Sandbox]
+    end
+    
+    subgraph Chain["Solana"]
+        USDC[USDC Payments]
+    end
+    
+    Agent --> SDK --> Gateway
+    Gateway --> Billing
+    Gateway --> Control
+    Gateway --> Inference
+    Gateway --> Serverless
+    Gateway --> GPU
+    Gateway --> Sandbox
+    Billing --> USDC
+```
+
+## Components
+
+### Gateway
+
+The **Gateway** is your primary entry point:
+- Handles MCP protocol (Streamable HTTP + SSE)
+- Routes tool calls to services
+- Enforces rate limits and authentication
+
+### Billing Service
+
+The **Billing Service** manages payments:
+- Generates quotes
+- Verifies on-chain payments
+- Issues receipts
+- Handles refunds
+
+### Control Plane
+
+The **Control Plane** manages execution:
+- Run/Step state machine
+- Budget enforcement
+- Idempotency and deduplication
+- Loop detection
+
+### Compute Layer
+
+Four compute services, all with the same payment model:
+
+| Service | Use Case |
+|:--------|:---------|
+| **Inference** | AI completions (100+ models) |
+| **Serverless** | Async jobs (Python/Node) |
+| **GPU Pods** | Dedicated GPU instances |
+| **Sandbox** | Isolated code execution |
+
+## Design Principles
+
+### 1. Non-Custodial
+
+We never hold your private keys. All payments are on-chain.
+
+### 2. Prepaid Only
+
+All usage is prepaid. No credit, no invoices.
+
+### 3. Gasless
+
+You pay only in USDC. We cover all Solana fees.
+
+### 4. Isolated Execution
+
+All code runs in isolated environments with strict egress policies.
+
+---
+
+## Regions
+
+Currently available in **US-West**. Multi-region coming soon.
+
+## SLA
+
+Target availability: **99.9%** (working towards SLA documentation).

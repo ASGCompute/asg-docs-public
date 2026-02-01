@@ -1,0 +1,87 @@
+---
+title: "Security Overview"
+description: "ASG security practices and architecture"
+---
+
+# Security Overview
+
+Security is foundational to ASG Agent Cloud.
+
+## Core Principles
+
+### 1. Non-Custodial
+
+We never hold your private keys. All transactions are signed client-side.
+
+### 2. Isolated Execution
+
+All code runs in isolated environments:
+- Sandboxes have no network access (except allowlist)
+- GPU pods are isolated per-tenant
+- Serverless jobs run in ephemeral containers
+
+### 3. Defense in Depth
+
+Multiple layers of security:
+- Network isolation
+- Rate limiting
+- Budget enforcement
+- Audit logging
+
+## Data Handling
+
+| Data Type | Retention | Encryption |
+|:----------|:----------|:-----------|
+| Request logs | 30 days | At rest + in transit |
+| Receipts | 90 days | At rest + in transit |
+| Code execution | 0 (ephemeral) | In transit only |
+
+## Authentication
+
+Authentication is via Solana wallet signature:
+1. Sign a message with your wallet
+2. Include signature in requests
+3. ASG verifies on-chain
+
+No API keys, no passwords, no sessions.
+
+## Infrastructure
+
+- **TLS 1.3** on all endpoints
+- **SOC2 Type II** compliance (in progress)
+- **Regular penetration testing**
+- **24/7 monitoring**
+
+## Rate Limiting
+
+Built-in protection against abuse:
+- Per-wallet request limits
+- Concurrent execution limits
+- Budget caps per run
+
+## Vulnerability Disclosure
+
+Found a vulnerability? Please report responsibly.
+
+<Card title="Security Policy" icon="shield" href="/SECURITY.md">
+  Read our full security disclosure policy
+</Card>
+
+## Compliance
+
+| Standard | Status |
+|:---------|:-------|
+| SOC2 Type II | In progress |
+| GDPR | Compliant |
+| CCPA | Compliant |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/security/authentication">
+    Wallet-based authentication
+  </Card>
+  <Card title="Data Handling" icon="database" href="/security/data-handling">
+    How we handle your data
+  </Card>
+</CardGroup>

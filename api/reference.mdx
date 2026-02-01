@@ -1,0 +1,91 @@
+---
+title: "API Reference"
+description: "Complete ASG Agent Cloud API documentation"
+---
+
+# API Reference
+
+<Info>
+This API reference is auto-generated from our OpenAPI specification.
+</Info>
+
+## Overview
+
+ASG Agent Cloud uses **MCP (Model Context Protocol)** over HTTP for tool execution. All endpoints accept JSON and return JSON.
+
+## Base URL
+
+```
+https://agent.asgcompute.com
+```
+
+## Authentication
+
+All requests require Bearer authentication with a Solana wallet signature:
+
+```bash
+Authorization: Bearer <wallet-signature>
+```
+
+## Endpoints
+
+### Health
+
+<Card title="GET /health" icon="heart-pulse">
+  Check service status. No authentication required.
+</Card>
+
+### MCP Gateway
+
+<Card title="POST /mcp" icon="plug">
+  Execute MCP tool calls. Returns 402 with quote if payment needed.
+</Card>
+
+### Receipts
+
+<Card title="GET /receipts" icon="receipt">
+  List your payment receipts.
+</Card>
+
+<Card title="GET /receipts/{id}" icon="file-invoice">
+  Get a specific receipt by ID.
+</Card>
+
+### Runs
+
+<Card title="GET /runs" icon="person-running">
+  List your execution runs.
+</Card>
+
+<Card title="GET /runs/{id}" icon="circle-info">
+  Get run details by ID.
+</Card>
+
+## OpenAPI Specification
+
+The complete API specification is available at:
+- [View OpenAPI YAML](/openapi/public.openapi.yaml)
+
+## Error Handling
+
+All errors follow a consistent format. See [Error Codes](/api/errors) for the complete reference.
+
+```json
+{
+  "code": "QUOTE_EXPIRED",
+  "message": "Quote has expired",
+  "request_id": "req_abc123"
+}
+```
+
+## Rate Limits
+
+| Tier | Requests/min | Burst |
+|:-----|:-------------|:------|
+| Default | 60 | 10 |
+| Enterprise | Custom | Custom |
+
+Rate limit headers are included in responses:
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`

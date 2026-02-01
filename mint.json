@@ -1,0 +1,119 @@
+{
+    "$schema": "https://mintlify.com/schema.json",
+    "name": "ASG Agent Cloud",
+    "logo": {
+        "dark": "/logo/dark.svg",
+        "light": "/logo/light.svg"
+    },
+    "favicon": "/favicon.svg",
+    "colors": {
+        "primary": "#6366F1",
+        "light": "#818CF8",
+        "dark": "#4F46E5",
+        "anchors": {
+            "from": "#6366F1",
+            "to": "#8B5CF6"
+        }
+    },
+    "topbarLinks": [
+        {
+            "name": "Console",
+            "url": "https://agent.asgcompute.com/console"
+        }
+    ],
+    "topbarCtaButton": {
+        "name": "Get Started",
+        "url": "/guide/quickstart"
+    },
+    "tabs": [
+        {
+            "name": "API Reference",
+            "url": "api"
+        }
+    ],
+    "anchors": [
+        {
+            "name": "Status",
+            "icon": "signal",
+            "url": "https://status.asgcompute.com"
+        },
+        {
+            "name": "GitHub",
+            "icon": "github",
+            "url": "https://github.com/ASGCompute"
+        }
+    ],
+    "openapi": "openapi/public.openapi.yaml",
+    "api": {
+        "baseUrl": "https://agent.asgcompute.com",
+        "playground": {
+            "mode": "hide"
+        }
+    },
+    "navigation": [
+        {
+            "group": "Getting Started",
+            "pages": [
+                "introduction",
+                "guide/quickstart",
+                "guide/why-asg",
+                "guide/concepts",
+                "guide/architecture"
+            ]
+        },
+        {
+            "group": "Services",
+            "pages": [
+                "services/inference",
+                "services/serverless",
+                "services/gpu",
+                "services/sandbox"
+            ]
+        },
+        {
+            "group": "Billing",
+            "pages": [
+                "billing/overview",
+                "billing/pricing",
+                "billing/gasless",
+                "billing/receipts"
+            ]
+        },
+        {
+            "group": "SDK",
+            "pages": [
+                "sdk/typescript",
+                "sdk/examples"
+            ]
+        },
+        {
+            "group": "Security",
+            "pages": [
+                "security/overview",
+                "security/disclosure",
+                "security/authentication",
+                "security/data-handling"
+            ]
+        },
+        {
+            "group": "Resources",
+            "pages": [
+                "resources/glossary",
+                "resources/changelog",
+                "resources/roadmap"
+            ]
+        },
+        {
+            "group": "API Reference",
+            "pages": [
+                "api/overview",
+                "api/reference",
+                "api/errors"
+            ]
+        }
+    ],
+    "footerSocials": {
+        "twitter": "https://twitter.com/asgcompute",
+        "github": "https://github.com/ASGCompute"
+    }
+}

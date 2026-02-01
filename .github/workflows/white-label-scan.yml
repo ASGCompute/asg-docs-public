@@ -1,0 +1,82 @@
+name: white-label-scan
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+
+jobs:
+  scan:
+    name: White-Label Leak Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan for banned tokens
+        run: |
+          set -e
+          
+          echo "🔍 Scanning docs for white-label violations..."
+          
+          # Get all doc files
+          FILES=$(find docs -type f \( -name "*.md" -o -name "*.mdx" -o -name "*.yaml" -o -name "*.yml" -o -name "*.json" \) | grep -v node_modules | grep -v ".leak-banlist.txt")
+          
+          FAILED=0
+          
+          # Read banlist, skip comments and empty lines
+          while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+            # Skip comments and empty lines
+            [[ "$pattern" =~ ^#.*$ ]] && continue
+            [[ -z "$pattern" ]] && continue
+            
+            # Search for pattern (case-insensitive)
+            if echo "$FILES" | xargs grep -inI -- "$pattern" 2>/dev/null; then
+              echo "❌ BANNED TOKEN FOUND: $pattern"
+              FAILED=1
+            fi
+          done < docs/.leak-banlist.txt
+          
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "🚫 White-label scan FAILED!"
+            echo "Remove the banned tokens above before merging."
+            exit 1
+          fi
+          
+          echo "✅ White-label scan passed - no banned tokens found"
+
+      - name: Check for hardcoded secrets patterns
+        run: |
+          set -e
+          
+          echo "🔐 Scanning for potential secrets..."
+          
+          # Common secret patterns
+          PATTERNS=(
+            "sk-[a-zA-Z0-9]{32,}"
+            "api_key.*=.*['\"][a-zA-Z0-9]{20,}"
+            "password.*=.*['\"][^'\"]{8,}"
+            "[0-9a-fA-F]{64}"
+            "-----BEGIN.*PRIVATE KEY-----"
+          )
+          
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rEn "$pattern" docs/ --include="*.md" --include="*.mdx" --include="*.yaml" 2>/dev/null | grep -v ".leak-banlist.txt"; then
+              echo "⚠️  Potential secret pattern found: $pattern"
+              FOUND=1
+            fi
+          done
+          
+          if [ $FOUND -eq 1 ]; then
+            echo ""
+            echo "⚠️  Review the matches above - they may contain secrets"
+            # Warning only, not blocking
+          else
+            echo "✅ No obvious secret patterns found"
+          fi

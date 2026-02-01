@@ -1,0 +1,114 @@
+---
+title: "API Overview"
+description: "ASG Agent Cloud API Reference"
+---
+
+# API Overview
+
+ASG Agent Cloud uses the **Model Context Protocol (MCP)** for all tool interactions.
+
+## Endpoint
+
+```
+https://agent.asgcompute.com/mcp
+```
+
+## Protocol
+
+All requests use **JSON-RPC 2.0** over HTTP POST.
+
+## Request Format
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "tool_name",
+    "arguments": { ... },
+    "_meta": {
+      "payment": {
+        "tx_signature": "optional-payment-proof"
+      }
+    }
+  }
+}
+```
+
+## Methods
+
+| Method | Description |
+|:-------|:------------|
+| `tools/list` | List available tools |
+| `tools/call` | Execute a tool |
+
+## Authentication
+
+Authentication is via Solana wallet signature in the payment proof.
+
+## Response Format
+
+### Success (200)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": "...",
+    "_meta": {
+      "receipt_id": "rcpt_abc123",
+      "debited_usdc_microusd": 10000
+    }
+  }
+}
+```
+
+### Payment Required (402)
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "code": 402,
+    "message": "Payment Required",
+    "data": {
+      "quote_id": "quote_xyz",
+      "amount_usdc_microusd": 10000,
+      "expires_at": "2026-02-01T12:01:00Z"
+    }
+  }
+}
+```
+
+## Tools
+
+| Tool | Description |
+|:-----|:------------|
+| `inference_chat` | AI completions |
+| `serverless_invoke` | Run async jobs |
+| `gpu_provision` | Rent GPU pods |
+| `gpu_heartbeat` | Extend GPU lease |
+| `gpu_terminate` | End GPU lease |
+| `sandbox_execute` | Execute code |
+| `billing_get_receipt` | Get receipt details |
+
+## Rate Limits
+
+| Tier | Requests/min | Requests/day |
+|:-----|:-------------|:-------------|
+| Default | 60 | 10,000 |
+| Enterprise | Custom | Custom |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Error Codes" icon="triangle-exclamation" href="/api/errors">
+    Full error code reference
+  </Card>
+  <Card title="SDK" icon="code" href="/sdk/typescript">
+    Use our TypeScript SDK
+  </Card>
+</CardGroup>

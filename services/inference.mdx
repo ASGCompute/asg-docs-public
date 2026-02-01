@@ -1,0 +1,115 @@
+---
+title: "ASG Inference"
+description: "AI completions with 100+ models"
+---
+
+# ASG Inference
+
+Access state-of-the-art AI models with per-token pricing and instant access.
+
+## Overview
+
+ASG Inference provides:
+- **100+ models** — From fast to frontier
+- **OpenAI-compatible** — Drop-in replacement
+- **Per-token billing** — Pay exactly for usage
+- **Automatic fallback** — Reliability across providers
+
+## Quick Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://agent.asgcompute.com/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "inference_chat",
+      "arguments": {
+        "model": "asg-fast",
+        "messages": [
+          {"role": "user", "content": "Explain quantum computing in one sentence."}
+        ]
+      },
+      "_meta": {
+        "payment": {"tx_signature": "<your-signature>"}
+      }
+    }
+  }'
+```
+
+```typescript TypeScript
+const response = await client.callTool('inference_chat', {
+  model: 'asg-fast',
+  messages: [
+    { role: 'user', content: 'Explain quantum computing in one sentence.' }
+  ]
+});
+```
+
+</CodeGroup>
+
+## Model Tiers
+
+| Tier | Best For | Latency | Cost |
+|:-----|:---------|:--------|:-----|
+| `asg-fast` | Quick responses, chat | ~500ms | $ |
+| `asg-balanced` | General purpose | ~1s | $$ |
+| `asg-powerful` | Complex reasoning | ~2s | $$$ |
+| `asg-vision` | Image understanding | ~2s | $$$ |
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|:----------|:-----|:---------|:------------|
+| `model` | string | Yes | Model tier to use |
+| `messages` | array | Yes | Conversation messages |
+| `max_tokens` | number | No | Max output tokens (default: 1024) |
+| `temperature` | number | No | Randomness (0-2, default: 1) |
+| `stream` | boolean | No | Enable streaming (default: false) |
+
+## Response
+
+```json
+{
+  "result": {
+    "content": "Quantum computing uses quantum bits...",
+    "usage": {
+      "prompt_tokens": 12,
+      "completion_tokens": 45,
+      "total_tokens": 57
+    },
+    "_meta": {
+      "receipt_id": "rcpt_abc123",
+      "debited_usdc_microusd": 8500
+    }
+  }
+}
+```
+
+## Streaming
+
+For real-time responses, enable streaming:
+
+```typescript
+const stream = await client.callTool('inference_chat', {
+  model: 'asg-fast',
+  messages: [...],
+  stream: true
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.content);
+}
+```
+
+## Pricing
+
+See [Pricing](/billing/pricing) for current rates.
+
+<Tip>
+**Cost Optimization:** Use `asg-fast` for simple tasks and reserve `asg-powerful` for complex reasoning.
+</Tip>
