@@ -1,0 +1,5 @@
+<svg width="120" height="30" viewBox="0 0 120 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="5" width="20" height="20" rx="4" fill="#6366F1"/>
+  <text x="28" y="22" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="600" fill="#1F2937">ASG</text>
+  <text x="60" y="22" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="400" fill="#6B7280">Agent Cloud</text>
+</svg>
