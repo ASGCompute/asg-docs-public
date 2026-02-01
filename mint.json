@@ -50,6 +50,13 @@
             "mode": "hide"
         }
     },
+    "seo": {
+        "indexHiddenPages": true
+    },
+    "metadata": {
+        "og:site_name": "ASG Agent Cloud Documentation",
+        "og:image": "https://docs.asgcompute.com/images/og-image.png"
+    },
     "navigation": [
         {
             "group": "Getting Started",
