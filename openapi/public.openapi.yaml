@@ -1,12 +1,13 @@
 openapi: 3.1.0
 info:
   title: ASG Agent Cloud API
-  version: "v5.1.0"
+  version: "v5.2.3"
   description: |
     Public API for ASG Agent Cloud — agent-native infrastructure with MCP protocol and gasless USDC payments.
     
     ## Authentication
-    All requests require Bearer authentication via Solana wallet signature.
+    All requests require Bearer authentication via API key.
+    Create keys in the Console or via the /api/keys endpoint.
     
     ## Payment Flow
     1. Call tool without payment → Receive 402 with quote
@@ -28,6 +29,8 @@ tags:
     description: Service health endpoints
   - name: MCP
     description: Model Context Protocol tool execution
+  - name: Keys
+    description: API key management
   - name: Receipts
     description: Payment receipts and history
   - name: Runs
@@ -38,7 +41,7 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      description: Solana wallet signature token
+      description: API key (Bearer token). Create keys via Console or /api/keys endpoint.
 
   schemas:
     ErrorResponse:
@@ -130,21 +133,31 @@ components:
               description: Tool name
               examples:
                 - inference_chat
-                - serverless_invoke
-                - gpu_provision
+                - optify_vram_estimate
                 - sandbox_execute
             arguments:
               type: object
               description: Tool-specific arguments
-            _meta:
+            payment_proof:
               type: object
+              description: Payment verification object (required after 402 quote flow)
               properties:
-                payment:
-                  type: object
-                  properties:
-                    tx_signature:
-                      type: string
-                      description: Solana transaction signature
+                tx_ref:
+                  type: string
+                  description: Solana transaction signature
+                amount_usdc:
+                  type: number
+                  description: Amount paid in USDC
+                memo:
+                  type: string
+                  description: "Format: step_id:quote_id:nonce"
+                network:
+                  type: string
+                  enum: [mainnet-beta]
+                  description: Solana network
+            idempotency_key:
+              type: string
+              description: Unique key for idempotent requests (UUID recommended)
 
     ToolCallResponse:
       type: object
@@ -213,13 +226,328 @@ paths:
                   version:
                     type: string
 
+  /mcp/capabilities:
+    get:
+      tags: [MCP]
+      summary: MCP discovery endpoint
+      description: |
+        Returns MCP server capabilities including available tools, auth requirements,
+        and payment configuration. No authentication required.
+      security: []
+      responses:
+        "200":
+          description: Server capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    description: Server version
+                  protocol_version:
+                    type: string
+                    description: MCP protocol version
+                  environment:
+                    type: string
+                    enum: [dev, staging, prod]
+                    description: Current environment
+                  server:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      vendor:
+                        type: string
+                  tools:
+                    type: array
+                    description: Available tools
+                  auth:
+                    type: string
+                    example: api_key
+                  auth_header:
+                    type: string
+                    example: "Authorization: Bearer <api_key>"
+                  billing:
+                    type: object
+                    properties:
+                      model:
+                        type: string
+                        example: pay-per-use
+                      currency:
+                        type: string
+                        example: USDC
+                      network:
+                        type: string
+                        example: solana-mainnet
+
+  /api/keys:
+    get:
+      tags: [Keys]
+      summary: List API keys
+      description: Returns all API keys for the authenticated wallet.
+      responses:
+        "200":
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    key_preview:
+                      type: string
+                      description: Key prefix for identification (sk-agent-xxxx)
+                    scopes:
+                      type: array
+                      items:
+                        type: string
+                    is_active:
+                      type: boolean
+                    created_at:
+                      type: string
+                      format: date-time
+                    last_used_at:
+                      type: string
+                      format: date-time
+        "401":
+          description: Unauthorized
+    post:
+      tags: [Keys]
+      summary: Create API key
+      description: |
+        Creates a new API key. Requires signed ownership proof from connected wallet.
+        The raw key is only returned ONCE in the response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - message
+                - signature
+              properties:
+                name:
+                  type: string
+                  description: Human-readable label
+                scopes:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - inference:read
+                      - inference:write
+                      - compute:read
+                      - compute:run
+                      - billing:read
+                      - billing:write
+                message:
+                  type: string
+                  description: Base64 encoded verification message
+                signature:
+                  type: string
+                  description: Base64 encoded signed message from wallet
+      responses:
+        "201":
+          description: Key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  key_preview:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+                  key:
+                    type: string
+                    description: Raw API key (shown only once!)
+                  message:
+                    type: string
+        "401":
+          description: Unauthorized
+
+  /api/keys/{key_id}:
+    delete:
+      tags: [Keys]
+      summary: Revoke API key
+      parameters:
+        - in: path
+          name: key_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Key revoked
+        "404":
+          description: Key not found
+
+  /api/keys/{key_id}/rotate:
+    post:
+      tags: [Keys]
+      summary: Rotate API key
+      description: |
+        Rotates an existing API key. Generates a new key and invalidates the old one.
+        The new key is only returned ONCE in the response.
+      parameters:
+        - in: path
+          name: key_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Key rotated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  key:
+                    type: string
+                    description: New API key (shown only once!)
+                  key_preview:
+                    type: string
+                  message:
+                    type: string
+        "404":
+          description: Key not found
+
+  /v1/mcp/tools/call:
+    post:
+      tags: [MCP]
+      summary: Execute tool with 402 payment flow
+      description: |
+        Primary endpoint for billable tool execution.
+        
+        **Flow:**
+        1. POST without payment_proof → HTTP 402 with quote
+        2. Pay USDC on Solana (see payment_instructions in 402 response)
+        3. POST with payment_proof + idempotency_key → result + receipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tool
+              properties:
+                tool:
+                  type: string
+                  description: Tool identifier
+                  example: inference_chat
+                params:
+                  type: object
+                  description: Tool-specific parameters
+                payment_proof:
+                  type: object
+                  description: Required for paid execution (after 402)
+                  properties:
+                    tx_ref:
+                      type: string
+                      description: Solana transaction signature
+                    amount_usdc:
+                      type: number
+                    memo:
+                      type: string
+                      description: "step_id:quote_id:nonce"
+                    network:
+                      type: string
+                      enum: [mainnet-beta]
+                idempotency_key:
+                  type: string
+                  description: UUID for idempotent requests (required with payment_proof)
+      responses:
+        "200":
+          description: Tool executed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  request_id:
+                    type: string
+                  result:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                      content:
+                        type: string
+                      model:
+                        type: string
+                  receipt:
+                    type: object
+                    properties:
+                      receipt_id:
+                        type: string
+                      debited_usdc_microusd:
+                        type: integer
+                      balance_usdc_microusd:
+                        type: integer
+        "402":
+          description: Payment required - quote returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    enum: [PAYMENT_REQUIRED]
+                  quote:
+                    type: object
+                    properties:
+                      quote_id:
+                        type: string
+                      amount_usdc_microusd:
+                        type: integer
+                      expires_at:
+                        type: string
+                        format: date-time
+                  payment_instructions:
+                    type: object
+                    properties:
+                      network:
+                        type: string
+                      destination:
+                        type: string
+                        description: Treasury ATA address
+                      memo_format:
+                        type: string
+                  step_id:
+                    type: string
+        "401":
+          description: Unauthorized
+        "400":
+          description: Validation error
+
   /mcp:
     post:
       tags: [MCP]
-      summary: Execute MCP tool call
+      summary: JSON-RPC transport (SSE/streamable)
       description: |
-        Execute a tool through the MCP gateway. If no payment is provided,
-        returns 402 with a quote. Include payment signature to execute.
+        JSON-RPC 2.0 transport endpoint for MCP protocol. Supports tools/list.
+        For billable tool execution with 402 payment flow, use /v1/mcp/tools/call instead.
       requestBody:
         required: true
         content:
@@ -278,7 +606,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /receipts:
+  /api/receipts:
     get:
       tags: [Receipts]
       summary: List receipts
@@ -311,12 +639,15 @@ paths:
               schema:
                 type: object
                 properties:
-                  receipts:
+                  items:
                     type: array
                     items:
                       $ref: "#/components/schemas/Receipt"
                   next_cursor:
                     type: string
+                    nullable: true
+                  has_more:
+                    type: boolean
         "401":
           description: Unauthorized
           content:
@@ -324,7 +655,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /receipts/{receipt_id}:
+  /api/receipts/{receipt_id}:
     get:
       tags: [Receipts]
       summary: Get receipt by ID
@@ -356,7 +687,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /runs:
+  /api/runs:
     get:
       tags: [Runs]
       summary: List runs
@@ -382,26 +713,48 @@ paths:
               schema:
                 type: object
                 properties:
-                  runs:
+                  items:
                     type: array
                     items:
                       type: object
                       properties:
-                        run_id:
+                        id:
+                          type: string
+                          description: Run/lease ID
+                        step_id:
+                          type: string
+                        gpu_type:
                           type: string
                         status:
                           type: string
-                        budget_usdc_microusd:
-                          type: integer
-                        spent_usdc_microusd:
-                          type: integer
+                        endpoint:
+                          type: string
+                        rate_per_hour_usdc:
+                          type: number
+                        accrued_cost_usdc:
+                          type: number
+                        started_at:
+                          type: string
+                          format: date-time
                         created_at:
                           type: string
                           format: date-time
+                        terminated_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                        expires_at:
+                          type: string
+                          format: date-time
+                  next_cursor:
+                    type: string
+                    nullable: true
+                  has_more:
+                    type: boolean
         "401":
           description: Unauthorized
 
-  /runs/{run_id}:
+  /api/runs/{run_id}:
     get:
       tags: [Runs]
       summary: Get run by ID
