@@ -1,145 +1,173 @@
 ---
-title: "TypeScript SDK"
-description: "Official TypeScript SDK for ASG Agent Cloud"
+title: "TypeScript Integration"
+description: "Integrating ASG Agent Cloud with TypeScript"
 ---
 
-# TypeScript SDK
+# TypeScript Integration
 
-The official SDK for integrating ASG Agent Cloud into your TypeScript/JavaScript applications.
-
-## Installation
-
-```bash
-npm install @asgcompute/sdk
-```
+<Note>
+An official TypeScript SDK is on the roadmap. For now, use the REST API directly with `fetch()`. The examples below show you how.
+</Note>
 
 ## Quick Start
 
 ```typescript
-import { ASGClient } from '@asgcompute/sdk';
-import { Keypair } from '@solana/web3.js';
+const ASG_ENDPOINT = 'https://agent.asgcompute.com/mcp';
+const API_KEY = process.env.ASG_API_KEY!;
 
-// Initialize client
-const client = new ASGClient({
-  endpoint: 'https://agent.asgcompute.com/mcp',
-  wallet: Keypair.fromSecretKey(yourSecretKey),
-  network: 'mainnet' // or 'devnet'
-});
+// Step 1: Call a tool (will return 402 with quote)
+async function callTool(name: string, args: Record<string, unknown>) {
+  const response = await fetch(ASG_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: { name, arguments: args }
+    })
+  });
 
-// Call a tool
-const response = await client.callTool('inference_chat', {
-  model: 'asg-fast',
+  if (response.status === 402) {
+    const quote = await response.json();
+    // quote.payment_instructions has pay_to, usdc_mint, network
+    // Build and submit Solana USDC transfer, then retry:
+    return quote;
+  }
+
+  return response.json();
+}
+
+// Step 2: Retry with payment proof
+async function callToolWithPayment(
+  name: string,
+  args: Record<string, unknown>,
+  paymentProof: string  // base64url-encoded JSON
+) {
+  const response = await fetch(ASG_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`,
+      'X-Payment': paymentProof
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: { name, arguments: args }
+    })
+  });
+
+  return response.json();
+}
+```
+
+## List Available Tools
+
+```typescript
+async function listTools() {
+  const response = await fetch(ASG_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/list'
+    })
+  });
+
+  const data = await response.json();
+  return data.result.tools;
+  // [{ name: 'inference_chat', description: '...' }, ...]
+}
+```
+
+## Inference Example
+
+```typescript
+// Get a quote for inference
+const quote = await callTool('inference_chat', {
+  model: 'openai/gpt-4o-mini',
   messages: [{ role: 'user', content: 'Hello!' }]
 });
 
-console.log(response.result.content);
-```
+console.log(`Price: ${quote.quote.price_display}`);
+// "Price: $0.0024"
 
-## Configuration
+// After paying on Solana, retry with X-Payment header
+const result = await callToolWithPayment(
+  'inference_chat',
+  {
+    model: 'openai/gpt-4o-mini',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  },
+  paymentProof
+);
 
-```typescript
-const client = new ASGClient({
-  endpoint: string;          // Gateway URL
-  wallet: Keypair;           // Solana wallet
-  network: 'mainnet' | 'devnet';
-  timeout?: number;          // Request timeout (ms)
-  retries?: number;          // Auto-retry count
-});
-```
-
-## Core Methods
-
-### `listTools()`
-
-List all available tools.
-
-```typescript
-const tools = await client.listTools();
-// [{ name: 'inference_chat', description: ... }, ...]
-```
-
-### `callTool(name, arguments)`
-
-Execute a tool with automatic payment handling.
-
-```typescript
-const result = await client.callTool('sandbox_execute', {
-  language: 'python',
-  code: 'print("Hello!")'
-});
-```
-
-### `getQuote(name, arguments)`
-
-Get a price quote without executing.
-
-```typescript
-const quote = await client.getQuote('gpu_provision', {
-  gpu_type: 'RTX_4090',
-  ttl_seconds: 3600
-});
-
-console.log(`Cost: $${quote.amount_usdc / 1_000_000}`);
-```
-
-### `getReceipt(receiptId)`
-
-Retrieve a receipt by ID.
-
-```typescript
-const receipt = await client.getReceipt('rcpt_abc123');
-console.log(`Charged: ${receipt.debited_usdc_microusd}`);
-```
-
-## Streaming
-
-```typescript
-const stream = await client.callTool('inference_chat', {
-  model: 'asg-fast',
-  messages: [{ role: 'user', content: 'Write a poem' }],
-  stream: true
-});
-
-for await (const chunk of stream) {
-  process.stdout.write(chunk.content);
-}
+console.log(result.result.content);
 ```
 
 ## Error Handling
 
 ```typescript
-import { ASGError, QuoteExpiredError, BudgetExceededError } from '@asgcompute/sdk';
+async function reliableCall(name: string, args: Record<string, unknown>, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(ASG_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0', id: 1,
+          method: 'tools/call',
+          params: { name, arguments: args }
+        })
+      });
 
-try {
-  await client.callTool('inference_chat', { ... });
-} catch (error) {
-  if (error instanceof QuoteExpiredError) {
-    // Quote expired, retry
-  } else if (error instanceof BudgetExceededError) {
-    // Budget limit hit
-  } else if (error instanceof ASGError) {
-    console.error(`ASG Error ${error.code}: ${error.message}`);
+      const data = await response.json();
+
+      if (data.error?.code === 'QUOTE_EXPIRED') {
+        continue; // Retry with fresh quote
+      }
+      if (data.error?.code === 'RATE_LIMITED') {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+
+      return data;
+    } catch (err) {
+      if (attempt === maxRetries - 1) throw err;
+    }
   }
+  throw new Error('Max retries exceeded');
 }
 ```
 
-## TypeScript Types
+## Payment Proof Format
+
+The `X-Payment` header contains a base64url-encoded JSON object:
 
 ```typescript
-import type { 
-  Tool, 
-  Quote, 
-  Receipt, 
-  InferenceChatArgs,
-  GpuProvisionArgs 
-} from '@asgcompute/sdk';
+const paymentProof = btoa(JSON.stringify({
+  tx_signature: '5Uj3...',  // Solana transaction signature
+  quote_id: 'qt_xyz789'     // Quote ID from 402 response
+}));
 ```
 
 ## Next Steps
 
 <CardGroup cols={2}>
   <Card title="Examples" icon="code" href="/sdk/examples">
-    Full working examples
+    More working examples
   </Card>
   <Card title="API Reference" icon="file-code" href="/api/overview">
     Complete API documentation

@@ -14,9 +14,6 @@ flowchart LR
     Quote[Get Quote] --> Pay[Pay USDC]
     Pay --> Execute[Execute]
     Execute --> Receipt[Get Receipt]
-    Receipt --> Refund{Overpaid?}
-    Refund -->|Yes| Credit[Auto-refund]
-    Refund -->|No| Done[Complete]
 ```
 
 ## Key Principles
@@ -36,19 +33,18 @@ All amounts are in **microusd** — 1/1,000,000 of a USD:
 
 Payments settle on Solana in ~400ms. No waiting.
 
-### 4. Automatic Refunds
+### 4. Exact Pricing
 
-If you overpay (quote vs. actual), the difference is automatically returned.
+You pay exactly the quoted amount. The quote tells you the price before execution — no surprises.
 
 ## Flow Example
 
 | Step | What Happens | Amount |
 |:-----|:-------------|:-------|
-| 1. **Quote** | Request inference, get price | Quote: $0.10 |
-| 2. **Pay** | Send USDC on Solana | Paid: $0.10 |
-| 3. **Execute** | Tool runs, measures actual cost | Actual: $0.085 |
-| 4. **Receipt** | Get proof of work | Debited: $0.085 |
-| 5. **Refund** | Difference returned | Refunded: $0.015 |
+| 1. **Quote** | Request tool, get price | Quote: $0.0024 |
+| 2. **Pay** | Send USDC on Solana | Paid: $0.0024 |
+| 3. **Execute** | Tool runs | — |
+| 4. **Receipt** | Get proof of work | Debited: $0.0024 |
 
 ## Billing Terms
 
@@ -57,7 +53,6 @@ If you overpay (quote vs. actual), the difference is automatically returned.
 | **Quote** | Price commitment with TTL |
 | **Payment** | USDC transfer on Solana |
 | **Receipt** | Proof of completed work |
-| **Refund** | Return of overpayment |
 
 ## Next Steps
 

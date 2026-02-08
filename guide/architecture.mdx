@@ -23,10 +23,10 @@ flowchart TB
     end
     
     subgraph Compute["Compute Layer"]
-        Inference[Inference]
-        Serverless[Serverless]
-        GPU[GPU Pods]
-        Sandbox[Sandbox]
+        Inference[Inference ✅]
+        Sandbox[Sandbox ✅]
+        Serverless[Serverless 🔜]
+        GPU[GPU Pods 🔜]
     end
     
     subgraph Chain["Solana"]
@@ -58,7 +58,6 @@ The **Billing Service** manages payments:
 - Generates quotes
 - Verifies on-chain payments
 - Issues receipts
-- Handles refunds
 
 ### Control Plane
 
@@ -70,14 +69,14 @@ The **Control Plane** manages execution:
 
 ### Compute Layer
 
-Four compute services, all with the same payment model:
+Two active compute services, with more on the roadmap:
 
-| Service | Use Case |
-|:--------|:---------|
-| **Inference** | AI completions (100+ models) |
-| **Serverless** | Async jobs (Python/Node) |
-| **GPU Pods** | Dedicated GPU instances |
-| **Sandbox** | Isolated code execution |
+| Service | Status | Use Case |
+|:--------|:-------|:---------|
+| **Inference** | ✅ Active | AI completions (100+ models) |
+| **Sandbox** | ✅ Active | Isolated code execution |
+| **Serverless** | 🔜 Coming | Async jobs (Python/Node) |
+| **GPU Pods** | 🔜 Coming | Dedicated GPU instances |
 
 ## Design Principles
 

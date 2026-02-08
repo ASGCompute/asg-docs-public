@@ -9,32 +9,20 @@ All prices are pay-per-use with no minimums, commitments, or hidden fees.
 
 ## Inference
 
-| Tier | Input | Output | Best For |
-|:-----|:------|:-------|:---------|
-| **asg-fast** | $0.15/1M tokens | $0.60/1M tokens | Chat, simple tasks |
-| **asg-balanced** | $0.50/1M tokens | $2.00/1M tokens | General purpose |
-| **asg-powerful** | $3.00/1M tokens | $15.00/1M tokens | Complex reasoning |
-| **asg-vision** | $5.00/1M tokens | $15.00/1M tokens | Image understanding |
+ASG supports a wide range of AI models. Pricing varies by model:
 
-## Serverless
+| Model | Input | Output |
+|:------|:------|:-------|
+| **openai/gpt-4o-mini** | $0.15/1M tokens | $0.60/1M tokens |
+| **openai/gpt-4.1** | $2.00/1M tokens | $8.00/1M tokens |
+| **openai/gpt-5.2** | $3.00/1M tokens | $15.00/1M tokens |
+| **anthropic/claude-sonnet-4** | $3.00/1M tokens | $15.00/1M tokens |
+| **google/gemini-2.5-pro** | $1.25/1M tokens | $10.00/1M tokens |
+| **deepseek/deepseek-r1** | $0.55/1M tokens | $2.19/1M tokens |
 
-| Resource | Rate |
-|:---------|:-----|
-| **CPU time** | $0.00001/sec |
-| **Memory (per GB)** | $0.00001/sec |
-
-**Minimum charge:** $0.001 per invocation
-
-## GPU
-
-| GPU Type | Per Hour | Per Second |
-|:---------|:---------|:-----------|
-| **RTX 4090** | $0.40 | $0.000111 |
-| **A100 40GB** | $1.20 | $0.000333 |
-| **A100 80GB** | $1.80 | $0.000500 |
-| **H100 80GB** | $2.50 | $0.000694 |
-
-**Minimum charge:** 60 seconds
+<Note>
+Exact pricing depends on the upstream model provider. Use the **Quote** to see the exact cost before execution.
+</Note>
 
 ## Sandbox
 
@@ -45,25 +33,17 @@ All prices are pay-per-use with no minimums, commitments, or hidden fees.
 
 **Minimum charge:** $0.001 per execution
 
----
-
-## Free Tier
-
-New accounts receive **$5.00 in starter credits** to explore the platform.
+## Serverless
 
 <Note>
-Starter credits expire after 30 days and are non-transferable.
+**Coming Soon** — Serverless execution is on the roadmap. See [Roadmap](/resources/roadmap).
 </Note>
 
-## Enterprise
+## GPU
 
-For high-volume usage:
-- Volume discounts
-- Dedicated capacity
-- SLA guarantees
-- Priority support
-
-Contact: enterprise@asgcompute.com
+<Note>
+**Coming Soon** — GPU provisioning is on the roadmap. See [Roadmap](/resources/roadmap).
+</Note>
 
 ---
 
@@ -71,15 +51,12 @@ Contact: enterprise@asgcompute.com
 
 <AccordionGroup>
   <Accordion title="Are there any hidden fees?">
-    No. The prices shown are what you pay. We cover all Solana transaction fees.
+    No. The prices shown are what you pay. We cover all Solana transaction fees (gasless).
   </Accordion>
   <Accordion title="What's the minimum spend?">
     No minimum spend. Pay only for what you use.
   </Accordion>
-  <Accordion title="Do unused credits roll over?">
-    Starter credits expire after 30 days. Purchased credits never expire.
-  </Accordion>
-  <Accordion title="Can I get a refund?">
-    Automatic refunds for overpayment. No refunds for completed work.
+  <Accordion title="How do I know the price before running?">
+    Every tool call returns a **Quote** with the exact price before any payment is required.
   </Accordion>
 </AccordionGroup>

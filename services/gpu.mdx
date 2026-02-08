@@ -5,122 +5,35 @@ description: "Dedicated GPU pods for AI workloads"
 
 # ASG GPU
 
-Rent dedicated GPU instances on-demand.
+<Warning>
+**Coming Soon** — GPU provisioning is on the roadmap. The tools described below are planned but not yet active. See [Roadmap](/resources/roadmap) for timeline.
+</Warning>
 
-## Overview
+Rent dedicated GPU instances on-demand with per-second billing.
 
-ASG GPU provides:
+## Planned Capabilities
+
 - **H100, A100, RTX 4090** — Premium GPUs
 - **Per-second billing** — No hourly minimums
-- **Instant provisioning** — Usually <30 seconds
+- **Instant provisioning** — Target <30 seconds
 - **SSH access** — Full control of your pod
 
-## Quick Example
+## Planned Tools
 
-<CodeGroup>
+| Tool | Description |
+|:-----|:------------|
+| `gpu_provision` | Provision a GPU pod |
+| `gpu_heartbeat` | Extend a lease |
+| `gpu_terminate` | Terminate a pod |
 
-```bash curl
-# Provision a GPU pod
-curl -X POST https://agent.asgcompute.com/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/call",
-    "params": {
-      "name": "gpu_provision",
-      "arguments": {
-        "gpu_type": "RTX_4090",
-        "ttl_seconds": 3600
-      },
-      "_meta": {
-        "payment": {"tx_signature": "<your-signature>"}
-      }
-    }
-  }'
-```
+## Currently Active Tools
 
-```typescript TypeScript
-const pod = await client.callTool('gpu_provision', {
-  gpu_type: 'RTX_4090',
-  ttl_seconds: 3600
-});
+While GPU is not yet available, you can use these tools today:
 
-console.log(`Pod ready at: ${pod.endpoint}`);
-```
-
-</CodeGroup>
-
-## GPU Types
-
-| Type | VRAM | Best For | Rate |
-|:-----|:-----|:---------|:-----|
-| `RTX_4090` | 24 GB | Development, fine-tuning | $0.40/hr |
-| `A100_40GB` | 40 GB | Training, inference | $1.20/hr |
-| `A100_80GB` | 80 GB | Large models | $1.80/hr |
-| `H100_80GB` | 80 GB | Maximum performance | $2.50/hr |
-
-## Parameters
-
-| Parameter | Type | Required | Description |
-|:----------|:-----|:---------|:------------|
-| `gpu_type` | string | Yes | GPU type from table above |
-| `ttl_seconds` | number | Yes | Initial lease duration |
-| `image` | string | No | Docker image (default: pytorch) |
-
-## Lease Lifecycle
-
-```mermaid
-stateDiagram-v2
-    [*] --> Pending: gpu_provision
-    Pending --> Running: Pod ready
-    Running --> Running: heartbeat/extend
-    Running --> Terminated: gpu_terminate
-    Running --> Expired: TTL exceeded
-    Terminated --> [*]
-    Expired --> [*]
-```
-
-## Managing Leases
-
-### Extend Lease
-
-```typescript
-await client.callTool('gpu_heartbeat', {
-  lease_id: 'lease_abc123',
-  extend_seconds: 1800
-});
-```
-
-### Terminate Early
-
-```typescript
-await client.callTool('gpu_terminate', {
-  lease_id: 'lease_abc123'
-});
-```
-
-<Tip>
-**Cost Savings:** Terminate pods when not in use. You're only billed for active time.
-</Tip>
-
-## Response
-
-```json
-{
-  "result": {
-    "lease_id": "lease_abc123",
-    "status": "running",
-    "endpoint": "https://pod-abc123.asg.run",
-    "gpu_type": "RTX_4090",
-    "expires_at": "2026-02-01T14:00:00Z",
-    "_meta": {
-      "receipt_id": "rcpt_gpu456"
-    }
-  }
-}
-```
+- **`inference_chat`** — AI completions with 100+ models
+- **`sandbox_execute`** — Isolated code execution
+- **`optify_vram_estimate`** — Estimate VRAM requirements for models
 
 ## Pricing
 
-See [Pricing](/billing/pricing) for current GPU rates.
+GPU pricing will be announced when the service launches. See [Pricing](/billing/pricing).

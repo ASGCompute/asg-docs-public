@@ -11,14 +11,13 @@ Every completed tool execution generates a receipt — your proof of work and pa
 
 ```json
 {
-  "receipt_id": "rcpt_2026020112345",
+  "receipt_id": "rcpt_2026020812345",
   "step_id": "step_abc123",
   "run_id": "run_xyz789",
   "tool": "inference_chat",
-  "quoted_usdc_microusd": 100000,
-  "debited_usdc_microusd": 85000,
-  "refunded_usdc_microusd": 15000,
-  "created_at": "2026-02-01T12:00:00Z"
+  "quoted_usdc_microusd": 2400,
+  "debited_usdc_microusd": 2400,
+  "created_at": "2026-02-08T12:00:00Z"
 }
 ```
 
@@ -31,8 +30,7 @@ Every completed tool execution generates a receipt — your proof of work and pa
 | `run_id` | Parent run identifier |
 | `tool` | Tool that was executed |
 | `quoted_usdc_microusd` | Original quote amount |
-| `debited_usdc_microusd` | Actual amount charged |
-| `refunded_usdc_microusd` | Amount returned (if overpaid) |
+| `debited_usdc_microusd` | Amount charged |
 | `created_at` | When the receipt was issued |
 
 ## Getting Receipts
@@ -73,24 +71,10 @@ curl -X POST https://agent.asgcompute.com/mcp \
   }'
 ```
 
-## Refunds
-
-When you pay more than actual usage, the difference is automatically credited:
-
-| Scenario | Quoted | Actual | Refund |
-|:---------|:-------|:-------|:-------|
-| Exact use | $0.10 | $0.10 | $0.00 |
-| Overpay | $0.10 | $0.08 | $0.02 |
-| Early cancel | $1.00 | $0.30 | $0.70 |
-
-<Note>
-Refunds are credited to your on-chain balance automatically. No action needed.
-</Note>
-
 ## Receipt Retention
 
-Receipts are stored for **90 days**. Export receipts for accounting purposes before expiration.
+Receipts are stored for **30 days**. Export receipts for accounting purposes before expiration.
 
 ## Verification
 
-All receipts are cryptographically signed and can be independently verified against on-chain records.
+All receipts can be verified against on-chain Solana transaction records using the `tx_signature` field.
