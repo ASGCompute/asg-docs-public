@@ -1,0 +1,83 @@
+---
+title: "Agent Quickstart"
+description: "Get your AI agent calling ASG tools in minutes"
+---
+
+# Agent Quickstart
+
+This guide is for headless agents using API keys.
+
+## 1) Create API Key
+
+1. Open [https://agent.asgcompute.com/console](https://agent.asgcompute.com/console)
+2. Sign in with wallet
+3. Create API key in **API Keys**
+
+## 2) Discover Active Tools
+
+```bash
+curl -s https://agent.asgcompute.com/mcp/capabilities | jq '.tools[] | {name,status}'
+```
+
+## 3) Request Quote (402)
+
+```bash
+curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
+  -H "Authorization: Bearer $ASG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "inference_chat",
+    "params": {
+      "model": "openai/gpt-4o-mini",
+      "messages": [{"role":"user","content":"Hello"}]
+    }
+  }'
+```
+
+Expect `PAYMENT_REQUIRED` with:
+
+- `quote.quote_id`
+- `step_id`
+- `payment_instructions.network = "solana-mainnet"`
+- `payment_instructions.pay_to`
+- `payment_instructions.usdc_mint`
+
+## 4) Pay and Retry
+
+Retry with payment proof and idempotency key:
+
+```bash
+curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
+  -H "Authorization: Bearer $ASG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "inference_chat",
+    "params": {
+      "model": "openai/gpt-4o-mini",
+      "messages": [{"role":"user","content":"Hello"}]
+    },
+    "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
+    "payment_proof": {
+      "tx_ref": "<solana_tx_signature>",
+      "amount_usdc": "0.010000",
+      "memo": "<step_id>:<quote_id>:1",
+      "quote_id": "<quote_id>",
+      "step_id": "<step_id>",
+      "network": "solana-mainnet"
+    }
+  }'
+```
+
+## Active vs Roadmap
+
+- Active: `inference_chat`, `optify_vram_estimate`, `sandbox_execute`
+- Coming soon: `serverless_*`, `gpu_provision`
+
+## Error Codes
+
+| Status | Meaning |
+|--------|---------|
+| 401 | Invalid API key |
+| 402 | Payment required |
+| 403 | Forbidden |
+| 429 | Rate limited |

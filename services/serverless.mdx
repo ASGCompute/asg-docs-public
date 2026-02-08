@@ -1,102 +1,40 @@
 ---
 title: "ASG Serverless"
-description: "Run async jobs in the cloud"
+description: "Serverless roadmap status and planned contract"
 ---
 
 # ASG Serverless
 
-Execute Python and Node.js jobs with automatic scaling.
-
-## Overview
-
-ASG Serverless provides:
-- **Python & Node.js** — Popular runtimes
-- **Auto-scaling** — Scale to zero, scale to thousands
-- **Per-second billing** — Pay only when running
-- **Up to 10 minutes** — Long-running job support
-
-## Quick Example
-
-<CodeGroup>
-
-```bash curl
-curl -X POST https://agent.asgcompute.com/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/call",
-    "params": {
-      "name": "serverless_invoke",
-      "arguments": {
-        "runtime": "python3.11",
-        "code": "def main():\n    return {\"message\": \"Hello from serverless!\"}",
-        "entrypoint": "main"
-      },
-      "_meta": {
-        "payment": {"tx_signature": "<your-signature>"}
-      }
-    }
-  }'
-```
-
-```typescript TypeScript
-const result = await client.callTool('serverless_invoke', {
-  runtime: 'python3.11',
-  code: `
-def main():
-    return {"message": "Hello from serverless!"}
-  `,
-  entrypoint: 'main'
-});
-```
-
-</CodeGroup>
-
-## Parameters
-
-| Parameter | Type | Required | Description |
-|:----------|:-----|:---------|:------------|
-| `runtime` | string | Yes | `python3.11` or `node18` |
-| `code` | string | Yes | Source code to execute |
-| `entrypoint` | string | Yes | Function name to call |
-| `timeout_seconds` | number | No | Max execution time (default: 60) |
-| `memory_mb` | number | No | Memory allocation (default: 512) |
-
-## Runtimes
-
-| Runtime | Version | Packages |
-|:--------|:--------|:---------|
-| `python3.11` | Python 3.11 | numpy, pandas, requests |
-| `node18` | Node.js 18 | axios, lodash, dayjs |
-
-## Response
-
-```json
-{
-  "result": {
-    "output": {"message": "Hello from serverless!"},
-    "logs": "Function executed successfully",
-    "duration_ms": 234,
-    "_meta": {
-      "receipt_id": "rcpt_xyz789",
-      "debited_usdc_microusd": 5000
-    }
-  }
-}
-```
-
-## Use Cases
-
-- **Data processing** — Transform files, parse logs
-- **API integrations** — Call external APIs
-- **Batch operations** — Process queues
-- **Webhooks** — Handle external events
-
 <Warning>
-**Timeout:** Jobs are killed after `timeout_seconds`. Break long work into smaller chunks.
+`serverless_deploy`, `serverless_invoke`, and `serverless_cancel` are currently **coming soon** and are not part of the active production tool set.
 </Warning>
 
-## Pricing
+## Current Status
 
-See [Pricing](/billing/pricing) for per-second rates.
+- Discovery visibility: available in catalog as `coming_soon`
+- Production execution: not enabled
+- Billing in production: no active serverless charges yet
+
+## What Is Active Today
+
+Use these active tools in production:
+
+- `inference_chat`
+- `optify_vram_estimate`
+- `sandbox_execute`
+
+## Planned Scope (Roadmap)
+
+Planned serverless capabilities:
+
+- Function deploy/invoke/cancel
+- Per-second billing with 402 payment flow
+- Run and receipt telemetry consistent with active tools
+
+## Tracking
+
+Watch the capabilities endpoint for status changes:
+
+```bash
+curl -s https://agent.asgcompute.com/mcp/capabilities | jq '.tools[] | select(.name | startswith("serverless"))'
+```
