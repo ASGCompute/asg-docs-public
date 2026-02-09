@@ -63,6 +63,9 @@
             "pages": [
                 "introduction",
                 "guide/quickstart",
+                "guide/agent-quickstart",
+                "guide/payment-flow",
+                "guide/tool-availability",
                 "guide/why-asg",
                 "guide/concepts",
                 "guide/architecture"

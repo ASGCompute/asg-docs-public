@@ -91,7 +91,7 @@ The retry request must include `X-Payment` header with base64url-encoded JSON:
 
 ## Important Notes
 
-- **Network**: Only `solana-mainnet` is supported. Devnet/testnet payments are rejected.
+- **Network**: Only `solana-mainnet` is supported. All payments must use Solana mainnet USDC.
 - **Gasless**: ASG covers Solana transaction fees. Agents only need USDC — no SOL required.
 - **TTL**: Quotes expire after `ttl_seconds` (default 300s / 5 min). Expired quotes return `QUOTE_EXPIRED`.
 - **Idempotency**: Re-submitting the same `X-Payment` header returns the cached result without re-charging.
