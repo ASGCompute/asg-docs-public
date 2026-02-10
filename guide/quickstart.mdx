@@ -1,33 +1,114 @@
 ---
 title: "Quickstart"
-description: "Call your first ASG tool in under 5 minutes"
+description: "Call your first ASG tool in under 3 minutes"
 ---
 
 # Quickstart
 
-Get started with ASG Agent Cloud in a few minutes.
+Get started with ASG Agent Cloud — from zero to first call in 3 minutes.
 
 <Tip>
-**Time to first call:** ~3 minutes if you already have an API key and USDC on Solana mainnet.
+**Start free:** `get_status` and `echo` are **always free** — no payment required. Validate your setup before spending a cent.
 </Tip>
 
 ## Prerequisites
 
-- ASG API key (from Console)
-- Solana wallet with **USDC on mainnet**
+- ASG API key (from [Console → API Keys](https://agent.asgcompute.com/console/#/console/keys))
+- For paid tools: Solana wallet with **USDC on mainnet**
 - Node.js 18+ or Python 3.10+
 
-## Step 1: Discover Tools
+## Step 1: Get Your API Key
+
+1. Open [Console](https://agent.asgcompute.com/console/)
+2. Connect wallet → **API Keys** → **Create Key**
+3. Export the key:
 
 ```bash
-curl -s https://agent.asgcompute.com/mcp/capabilities | jq
+export ASG_API_KEY="sk-agent-YOUR_KEY"
 ```
 
-## Step 2: Request a Quote (402)
+## Step 2: First Call — Free (No Payment!)
 
-Call a billable tool without `payment_proof` to receive a quote.
+Call `get_status` to verify your key works:
 
-```bash
+<CodeGroup>
+
+```bash curl
+curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
+  -H "Authorization: Bearer $ASG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"tool": "get_status", "params": {}}'
+```
+
+```python Python
+import requests, os
+
+ASG = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
+
+r = requests.post(ASG, json={
+    "tool": "get_status",
+    "params": {}
+}, headers={
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+})
+print(r.json())
+```
+
+```typescript TypeScript
+const ASG = 'https://agent.asgcompute.com/v1/mcp/tools/call';
+const API_KEY = process.env.ASG_API_KEY!;
+
+const res = await fetch(ASG, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ tool: 'get_status', params: {} }),
+});
+console.log(await res.json());
+```
+
+</CodeGroup>
+
+✅ You should see `"ok": true` with your balance and system status.
+
+## Step 3: Discover Tools
+
+<CodeGroup>
+
+```bash curl
+curl -s https://agent.asgcompute.com/mcp/capabilities \
+  | jq '.tools[] | {name, status, billable}'
+```
+
+```python Python
+import requests
+
+r = requests.get("https://agent.asgcompute.com/mcp/capabilities")
+for tool in r.json().get("tools", []):
+    print(f"{tool['name']:30} billable={tool.get('billable', 'N/A')}")
+```
+
+```typescript TypeScript
+const res = await fetch('https://agent.asgcompute.com/mcp/capabilities');
+const data = await res.json();
+for (const tool of data.tools) {
+  console.log(`${tool.name.padEnd(30)} billable=${tool.billable}`);
+}
+```
+
+</CodeGroup>
+
+## Step 4: Make a Paid Call
+
+Call a billable tool. If you have balance, it executes immediately. Otherwise, you get a 402 with a quote.
+
+<CodeGroup>
+
+```bash curl
 curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
   -H "Authorization: Bearer $ASG_API_KEY" \
   -H "Content-Type: application/json" \
@@ -40,44 +121,93 @@ curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
   }'
 ```
 
+```python Python
+import requests, os
+
+ASG = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
+
+r = requests.post(ASG, json={
+    "tool": "inference_chat",
+    "params": {
+        "model": "openai/gpt-4o-mini",
+        "messages": [{"role": "user", "content": "Hello!"}]
+    }
+}, headers={
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+})
+print(r.status_code, r.json())
+```
+
+```typescript TypeScript
+const ASG = 'https://agent.asgcompute.com/v1/mcp/tools/call';
+const API_KEY = process.env.ASG_API_KEY!;
+
+const res = await fetch(ASG, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    tool: 'inference_chat',
+    params: {
+      model: 'openai/gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Hello!' }],
+    },
+  }),
+});
+console.log(res.status, await res.json());
+```
+
+</CodeGroup>
+
+### If 200: Success!
+
+```json
+{
+  "ok": true,
+  "result": { "type": "text", "content": "Hello! How can I help you?" },
+  "receipt": { "receipt_id": "rcpt_123", "debited_usdc_microusd": 10000 }
+}
+```
+
+### If 402: Payment Required
+
+You receive a quote with `payment_instructions`:
+
 ```json
 {
   "code": "PAYMENT_REQUIRED",
-  "message": "Payment required to execute tool",
   "quote": {
     "quote_id": "abc123",
     "amount_usdc_microusd": 10000,
-    "expires_at": "2026-02-08T12:00:00Z"
+    "expires_at": "2026-02-10T12:00:00Z"
   },
   "payment_instructions": {
     "network": "solana-mainnet",
     "asset": "USDC",
     "pay_to": "<treasury_ata>",
-    "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-    "memo_format": "step_id:quote_id:nonce",
-    "methods": ["x402_header", "body_payment_proof"]
+    "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
   },
   "step_id": "step_xyz"
 }
 ```
 
-## Step 3: Pay on Solana Mainnet
+## Step 5: Pay on Solana Mainnet
 
-Send USDC to `pay_to` using memo:
+Send USDC to `pay_to` with memo: `{step_id}:{quote_id}:1`
 
-```text
-{step_id}:{quote_id}:{nonce}
-```
+<Tip>
+**Faster:** Deposit USDC via [Console → Balance](https://agent.asgcompute.com/console/#/console/balance) first. Then all paid calls deduct from your balance automatically — no per-call on-chain transactions needed.
+</Tip>
 
-Example:
+## Step 6: Retry with Payment Proof
 
-```text
-step_xyz:abc123:1
-```
+<CodeGroup>
 
-## Step 4: Retry with Payment Proof
-
-```bash
+```bash curl
 curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
   -H "Authorization: Bearer $ASG_API_KEY" \
   -H "Content-Type: application/json" \
@@ -99,31 +229,77 @@ curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
   }'
 ```
 
-```json
-{
-  "ok": true,
-  "result": {
-    "type": "text",
-    "content": "Hello! How can I help you?"
-  },
-  "receipt": {
-    "receipt_id": "rcpt_123",
-    "debited_usdc_microusd": 10000
-  }
-}
+```python Python
+import requests, os
+
+ASG = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
+
+r = requests.post(ASG, json={
+    "tool": "inference_chat",
+    "params": {
+        "model": "openai/gpt-4o-mini",
+        "messages": [{"role": "user", "content": "Hello!"}]
+    },
+    "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
+    "payment_proof": {
+        "tx_ref": "<solana_tx_signature>",
+        "quote_id": "abc123",
+        "step_id": "step_xyz",
+        "memo": "step_xyz:abc123:1",
+        "amount_usdc": "0.010000",
+        "network": "solana-mainnet"
+    }
+}, headers={
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+})
+print(r.json())
 ```
+
+```typescript TypeScript
+const ASG = 'https://agent.asgcompute.com/v1/mcp/tools/call';
+const API_KEY = process.env.ASG_API_KEY!;
+
+const res = await fetch(ASG, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    tool: 'inference_chat',
+    params: {
+      model: 'openai/gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Hello!' }],
+    },
+    idempotency_key: '550e8400-e29b-41d4-a716-446655440000',
+    payment_proof: {
+      tx_ref: '<solana_tx_signature>',
+      quote_id: 'abc123',
+      step_id: 'step_xyz',
+      memo: 'step_xyz:abc123:1',
+      amount_usdc: '0.010000',
+      network: 'solana-mainnet',
+    },
+  }),
+});
+console.log(await res.json());
+```
+
+</CodeGroup>
 
 ## What's Next?
 
 <CardGroup cols={2}>
+  <Card title="Agent Quickstart" icon="robot" href="/guide/agent-quickstart">
+    Full agent integration guide with Python + TypeScript examples
+  </Card>
   <Card title="Core Concepts" icon="book" href="/guide/concepts">
-    Learn about Runs, Steps, Budgets, and Receipts
+    Runs, Steps, Budgets, and Receipts
   </Card>
-  <Card title="Services" icon="grid" href="/services/inference">
-    Explore currently available services
-  </Card>
-  <Card title="SDK Reference" icon="code" href="/sdk/typescript">
-    TypeScript SDK documentation
+  <Card title="SDK Reference" icon="code" href="/sdk/examples">
+    Working code examples
   </Card>
   <Card title="Pricing" icon="credit-card" href="/billing/pricing">
     Detailed pricing for all services

@@ -75,6 +75,98 @@ curl -X POST https://agent.asgcompute.com/mcp \
 
 Receipts are stored for **30 days**. Export receipts for accounting purposes before expiration.
 
-## Verification
+---
 
-All receipts can be verified against on-chain Solana transaction records using the `tx_signature` field.
+## Verify a Receipt
+
+Every receipt is independently verifiable — both through the ASG API and directly on the Solana blockchain.
+
+### Step 1: Look Up the Receipt
+
+Use the `billing_get_receipt` tool to retrieve full receipt details by ID:
+
+```bash
+curl -X POST https://agent.asgcompute.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "billing_get_receipt",
+      "arguments": {
+        "receipt_id": "rcpt_2026020812345"
+      }
+    }
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"receipt_id\":\"rcpt_2026020812345\",\"tool\":\"inference_chat\",\"quoted_usdc_microusd\":2400,\"debited_usdc_microusd\":2400,\"tx_signature\":\"5UxK...7nPq\",\"created_at\":\"2026-02-08T12:00:00Z\"}"
+      }
+    ]
+  }
+}
+```
+
+### Step 2: Verify On-Chain
+
+Every receipt includes a `tx_signature` field — the Solana transaction signature. Use it to verify the payment on-chain:
+
+**Solana Explorer URL format:**
+
+```
+https://explorer.solana.com/tx/<TX_SIGNATURE>
+```
+
+For example, if `tx_signature` is `5UxK...7nPq`:
+
+```
+https://explorer.solana.com/tx/5UxK...7nPq
+```
+
+<Tip>
+Bookmark the Solana Explorer link for quick access: [explorer.solana.com](https://explorer.solana.com)
+</Tip>
+
+### Step 3: Cross-Reference
+
+Verify that the on-chain transaction matches your receipt:
+
+| Receipt Field | On-Chain Check |
+|:-------------|:---------------|
+| `debited_usdc_microusd` | Amount transferred matches |
+| `tx_signature` | Transaction exists and is finalized |
+| `created_at` | Timestamp aligns with block time |
+
+<Note>
+All Solana transactions are on **mainnet**. Ensure you're viewing the mainnet explorer, not devnet.
+</Note>
+
+### Programmatic Verification
+
+For automated verification, you can query the Solana RPC directly:
+
+```bash
+curl -X POST https://api.mainnet-beta.solana.com \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "getTransaction",
+    "params": [
+      "YOUR_TX_SIGNATURE",
+      { "encoding": "json", "maxSupportedTransactionVersion": 0 }
+    ]
+  }'
+```
+
+This returns the full transaction details including sender, recipient, amount, and confirmation status.

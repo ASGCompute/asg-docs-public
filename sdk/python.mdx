@@ -1,0 +1,506 @@
+---
+title: "Python Integration"
+description: "Integrating ASG Agent Cloud with Python"
+---
+
+# Python Integration
+
+<Note>
+An official Python SDK is on the roadmap. For now, use the REST API directly with `requests`. The examples below show you how.
+</Note>
+
+## Quick Start
+
+Install `requests` (if you haven't already) and set your API key:
+
+```bash
+pip install requests
+export ASG_API_KEY="your-api-key"
+```
+
+Verify connectivity with a free tool — no payment required:
+
+```python
+import os
+import requests
+
+ASG_ENDPOINT = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
+
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {API_KEY}",
+}
+
+# Free tool — no payment needed
+response = requests.post(
+    ASG_ENDPOINT,
+    headers=HEADERS,
+    json={
+        "tool": "get_status",
+        "arguments": {},
+    },
+)
+
+print(response.status_code)  # 200
+print(response.json())
+# {"result": {"status": "operational", "version": "5.2.3"}}
+```
+
+## Call a Tool
+
+Most tools are paid. The flow is: **call → receive 402 quote → pay on Solana → retry with proof**.
+
+```python
+import os
+import json
+import base64
+from uuid import uuid4
+import requests
+
+ASG_ENDPOINT = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
+
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {API_KEY}",
+}
+
+
+def call_tool(name: str, arguments: dict) -> dict:
+    """Call an ASG tool. Returns result on 200, or quote on 402."""
+    response = requests.post(
+        ASG_ENDPOINT,
+        headers=HEADERS,
+        json={"tool": name, "arguments": arguments},
+    )
+
+    if response.status_code == 402:
+        quote = response.json()
+        # quote["payment_instructions"] has pay_to, usdc_mint, network
+        print(f"Payment required: {quote['quote']['price_display']}")
+        return quote
+
+    response.raise_for_status()
+    return response.json()
+
+
+def call_tool_with_payment(
+    name: str,
+    arguments: dict,
+    tx_signature: str,
+    quote_id: str,
+) -> dict:
+    """Retry a tool call with Solana payment proof via X-Payment header."""
+    payment_proof = base64.urlsafe_b64encode(
+        json.dumps({
+            "tx_signature": tx_signature,
+            "quote_id": quote_id,
+        }).encode()
+    ).decode()
+
+    headers = {**HEADERS, "X-Payment": payment_proof}
+
+    response = requests.post(
+        ASG_ENDPOINT,
+        headers=headers,
+        json={"tool": name, "arguments": arguments},
+    )
+    response.raise_for_status()
+    return response.json()
+```
+
+## Inference Chat
+
+Use the `inference_chat` tool for LLM completions:
+
+```python
+# Step 1: Get a quote
+quote = call_tool("inference_chat", {
+    "model": "openai/gpt-4o-mini",
+    "messages": [{"role": "user", "content": "What is the capital of France?"}],
+})
+
+print(f"Price: {quote['quote']['price_display']}")
+# "Price: $0.0024"
+
+# Step 2: After paying on Solana, retry with proof
+result = call_tool_with_payment(
+    "inference_chat",
+    {
+        "model": "openai/gpt-4o-mini",
+        "messages": [{"role": "user", "content": "What is the capital of France?"}],
+    },
+    tx_signature="5Uj3...",
+    quote_id=quote["quote"]["id"],
+)
+
+print(result["result"]["content"])
+# [{"type": "text", "text": "The capital of France is Paris."}]
+```
+
+## Code Execution (Sandbox)
+
+Run Python code in a secure sandbox:
+
+```python
+code = """
+import math
+primes = [n for n in range(2, 50) if all(n % i for i in range(2, int(math.sqrt(n)) + 1))]
+print(primes)
+"""
+
+quote = call_tool("sandbox_execute", {
+    "code": code,
+    "language": "python",
+})
+
+# Pay on Solana, then retry with proof:
+result = call_tool_with_payment(
+    "sandbox_execute",
+    {"code": code, "language": "python"},
+    tx_signature="4xK9...",
+    quote_id=quote["quote"]["id"],
+)
+
+print(result["result"]["content"])
+# [{"type": "text", "text": "[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]"}]
+```
+
+## Multi-turn Chat
+
+Maintain conversation history with a helper class:
+
+```python
+import os
+import json
+import base64
+from uuid import uuid4
+import requests
+
+
+class ASGChat:
+    """Multi-turn chat session with message history."""
+
+    def __init__(
+        self,
+        model: str = "openai/gpt-4o-mini",
+        system_prompt: str | None = None,
+    ) -> None:
+        self.model = model
+        self.messages: list[dict] = []
+        self.endpoint = "https://agent.asgcompute.com/v1/mcp/tools/call"
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {os.environ['ASG_API_KEY']}",
+        }
+        if system_prompt:
+            self.messages.append({"role": "system", "content": system_prompt})
+
+    def get_quote(self, user_message: str) -> dict:
+        """Send a message and get a payment quote (402)."""
+        self.messages.append({"role": "user", "content": user_message})
+        response = requests.post(
+            self.endpoint,
+            headers=self.headers,
+            json={
+                "tool": "inference_chat",
+                "arguments": {
+                    "model": self.model,
+                    "messages": self.messages,
+                },
+            },
+        )
+        if response.status_code == 402:
+            return response.json()
+        response.raise_for_status()
+        return response.json()
+
+    def send_with_payment(
+        self,
+        tx_signature: str,
+        quote_id: str,
+    ) -> str:
+        """Complete the call with payment proof and return assistant reply."""
+        payment_proof = base64.urlsafe_b64encode(
+            json.dumps({
+                "tx_signature": tx_signature,
+                "quote_id": quote_id,
+            }).encode()
+        ).decode()
+
+        headers = {**self.headers, "X-Payment": payment_proof}
+        response = requests.post(
+            self.endpoint,
+            headers=headers,
+            json={
+                "tool": "inference_chat",
+                "arguments": {
+                    "model": self.model,
+                    "messages": self.messages,
+                },
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        assistant_text = data["result"]["content"][0]["text"]
+        self.messages.append({"role": "assistant", "content": assistant_text})
+        return assistant_text
+
+
+# Usage
+chat = ASGChat(system_prompt="You are a helpful coding assistant.")
+
+quote = chat.get_quote("How do I read a CSV in Python?")
+print(f"Price: {quote['quote']['price_display']}")
+
+# After paying on Solana:
+reply = chat.send_with_payment(
+    tx_signature="3xR7...",
+    quote_id=quote["quote"]["id"],
+)
+print(reply)
+
+# Continue the conversation — history is preserved
+quote2 = chat.get_quote("Now show me how to filter rows.")
+```
+
+## Budget Protection
+
+Track spending and enforce limits to prevent runaway costs:
+
+```python
+from dataclasses import dataclass, field
+
+
+@dataclass
+class BudgetTracker:
+    """Track ASG spending with enforced limits (in microUSD)."""
+
+    limit_microusd: int  # e.g. 5_000_000 = $5.00
+    spent_microusd: int = 0
+    calls: list[dict] = field(default_factory=list)
+
+    @property
+    def remaining_microusd(self) -> int:
+        return self.limit_microusd - self.spent_microusd
+
+    @property
+    def remaining_display(self) -> str:
+        return f"${self.remaining_microusd / 1_000_000:.4f}"
+
+    def check_quote(self, quote: dict) -> bool:
+        """Return True if the quote is within budget."""
+        price = quote["quote"]["price_microusd"]
+        return price <= self.remaining_microusd
+
+    def record_spend(self, quote: dict, tx_signature: str) -> None:
+        """Record a completed payment."""
+        price = quote["quote"]["price_microusd"]
+        self.spent_microusd += price
+        self.calls.append({
+            "tool": quote["quote"]["tool"],
+            "price_microusd": price,
+            "tx_signature": tx_signature,
+        })
+
+
+# Usage
+budget = BudgetTracker(limit_microusd=5_000_000)  # $5.00 limit
+
+quote = call_tool("inference_chat", {
+    "model": "openai/gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello!"}],
+})
+
+if budget.check_quote(quote):
+    # Safe to pay — proceed with Solana transfer
+    result = call_tool_with_payment(
+        "inference_chat",
+        {
+            "model": "openai/gpt-4o-mini",
+            "messages": [{"role": "user", "content": "Hello!"}],
+        },
+        tx_signature="2kP5...",
+        quote_id=quote["quote"]["id"],
+    )
+    budget.record_spend(quote, tx_signature="2kP5...")
+    print(f"Remaining budget: {budget.remaining_display}")
+else:
+    print(
+        f"Over budget! Need {quote['quote']['price_display']}, "
+        f"only {budget.remaining_display} left."
+    )
+```
+
+## Async with httpx
+
+<Note>
+This section uses `httpx` for async HTTP. Install it with `pip install httpx`.
+The `requests` library (used above) does not support async.
+</Note>
+
+```python
+import os
+import asyncio
+import httpx
+
+ASG_ENDPOINT = "https://agent.asgcompute.com/v1/mcp/tools/call"
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {os.environ['ASG_API_KEY']}",
+}
+
+
+async def call_tool_async(
+    client: httpx.AsyncClient,
+    name: str,
+    arguments: dict,
+) -> dict:
+    """Async tool call using httpx."""
+    response = await client.post(
+        ASG_ENDPOINT,
+        headers=HEADERS,
+        json={"tool": name, "arguments": arguments},
+    )
+    return response.json()
+
+
+async def batch_status_check(tools: list[str]) -> list[dict]:
+    """Check multiple tools concurrently."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        tasks = [
+            call_tool_async(client, tool, {})
+            for tool in tools
+        ]
+        return await asyncio.gather(*tasks)
+
+
+# Run batch check
+results = asyncio.run(batch_status_check(["get_status", "echo"]))
+for r in results:
+    print(r)
+```
+
+## Error Handling
+
+Handle transient errors with exponential backoff:
+
+```python
+import time
+import requests
+
+
+def reliable_call(
+    name: str,
+    arguments: dict,
+    max_retries: int = 3,
+) -> dict:
+    """Call a tool with automatic retry and exponential backoff."""
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(
+                ASG_ENDPOINT,
+                headers=HEADERS,
+                json={"tool": name, "arguments": arguments},
+                timeout=30,
+            )
+
+            data = response.json()
+
+            # Handle specific error codes
+            if data.get("error", {}).get("code") == "QUOTE_EXPIRED":
+                print("Quote expired, retrying with fresh quote...")
+                continue
+
+            if data.get("error", {}).get("code") == "RATE_LIMITED":
+                wait = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                print(f"Rate limited, waiting {wait}s...")
+                time.sleep(wait)
+                continue
+
+            if response.status_code == 401:
+                raise ValueError("Invalid API key — check ASG_API_KEY")
+
+            return data
+
+        except requests.ConnectionError:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)
+
+    raise RuntimeError(f"Failed after {max_retries} retries")
+```
+
+## MCP Integration
+
+Use the JSON-RPC endpoint directly for MCP-native agent integrations:
+
+```python
+import os
+import asyncio
+import httpx
+
+MCP_ENDPOINT = "https://agent.asgcompute.com/mcp"
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"Bearer {os.environ['ASG_API_KEY']}",
+}
+
+
+async def mcp_request(
+    client: httpx.AsyncClient,
+    method: str,
+    params: dict | None = None,
+) -> dict:
+    """Send a JSON-RPC request to the MCP endpoint."""
+    response = await client.post(
+        MCP_ENDPOINT,
+        headers=HEADERS,
+        json={
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": method,
+            "params": params or {},
+        },
+    )
+    return response.json()
+
+
+async def main() -> None:
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # List available tools
+        tools_response = await mcp_request(client, "tools/list")
+        tools = tools_response["result"]["tools"]
+        for tool in tools:
+            print(f"  {tool['name']}: {tool['description']}")
+
+        # Call a free tool via JSON-RPC
+        result = await mcp_request(
+            client,
+            "tools/call",
+            {"name": "get_status", "arguments": {}},
+        )
+        print(result)
+
+
+asyncio.run(main())
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Examples" icon="code" href="/sdk/examples">
+    Working examples for common use cases
+  </Card>
+  <Card title="Agent Quickstart" icon="rocket" href="/guide/agent-quickstart">
+    Full agent onboarding in under 2 minutes
+  </Card>
+  <Card title="API Reference" icon="file-code" href="/api/overview">
+    Complete API documentation
+  </Card>
+  <Card title="Payment Flow" icon="credit-card" href="/guide/payment-flow">
+    Detailed Solana payment guide
+  </Card>
+</CardGroup>

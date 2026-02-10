@@ -1,52 +1,198 @@
 ---
 title: "Agent Quickstart"
-description: "Get your AI agent calling ASG tools in minutes"
+description: "Get your AI agent calling ASG tools in under 5 minutes"
 ---
 
 # Agent Quickstart
 
-This guide is for headless agents using API keys.
+Get your headless agent calling ASG tools. **Time to first call: ~2 minutes.**
 
-## 1) Create API Key
+<Tip>
+**Start free:** Use `get_status` and `echo` to validate your setup before making paid calls. These tools are **always free** — no payment required.
+</Tip>
 
-1. Open [https://agent.asgcompute.com/console](https://agent.asgcompute.com/console)
-2. Sign in with wallet
-3. Create API key in **API Keys**
+## Prerequisites
 
-## 2) Discover Active Tools
+- ASG API key ([create in Console](https://agent.asgcompute.com/console/#/console/keys))
+- For paid tools: Solana wallet with USDC (mainnet)
+
+## Step 1: Create API Key
+
+1. Open [Console](https://agent.asgcompute.com/console/)
+2. Connect wallet → **API Keys** → **Create Key**
+3. Copy key (starts with `sk-agent-...`)
 
 ```bash
-curl -s https://agent.asgcompute.com/mcp/capabilities | jq '.tools[] | {name,status}'
+export ASG_API_KEY="sk-agent-YOUR_KEY_HERE"
 ```
 
-## 3) Request Quote (402)
+## Step 2: Verify Setup (Free)
 
-```bash
+Test connectivity and auth with the free `get_status` tool — **no payment needed**:
+
+<CodeGroup>
+
+```bash curl
 curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
   -H "Authorization: Bearer $ASG_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "tool": "inference_chat",
+    "tool": "get_status",
+    "params": {}
+  }'
+```
+
+```python Python
+import requests, os
+
+ASG = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
+
+r = requests.post(ASG, json={
+    "tool": "get_status",
+    "params": {}
+}, headers={
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+})
+print(r.json())
+```
+
+```typescript TypeScript
+const ASG = 'https://agent.asgcompute.com/v1/mcp/tools/call';
+const API_KEY = process.env.ASG_API_KEY!;
+
+const res = await fetch(ASG, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ tool: 'get_status', params: {} }),
+});
+console.log(await res.json());
+```
+
+</CodeGroup>
+
+Expected response (200):
+
+```json
+{
+  "ok": true,
+  "result": {
+    "version": "v5.2.3",
+    "status": "healthy",
+    "balance_usdc": "11.11"
+  }
+}
+```
+
+✅ If you see `"ok": true`, your API key works. Move to the next step.
+
+## Step 3: Echo Test (Free)
+
+Validate payload format with the free `echo` tool — **no payment needed**:
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
+  -H "Authorization: Bearer $ASG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "echo",
     "params": {
-      "model": "openai/gpt-4o-mini",
-      "messages": [{"role":"user","content":"Hello"}]
+      "message": "hello from my agent"
     }
   }'
 ```
 
-Expect `PAYMENT_REQUIRED` with:
+```python Python
+import requests, os
 
-- `quote.quote_id`
-- `step_id`
-- `payment_instructions.network = "solana-mainnet"`
-- `payment_instructions.pay_to`
-- `payment_instructions.usdc_mint`
+ASG = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
 
-## 4) Pay and Retry
+r = requests.post(ASG, json={
+    "tool": "echo",
+    "params": {"message": "hello from my agent"}
+}, headers={
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+})
+print(r.json())
+```
 
-Retry with payment proof and idempotency key:
+```typescript TypeScript
+const ASG = 'https://agent.asgcompute.com/v1/mcp/tools/call';
+const API_KEY = process.env.ASG_API_KEY!;
 
-```bash
+const res = await fetch(ASG, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    tool: 'echo',
+    params: { message: 'hello from my agent' },
+  }),
+});
+console.log(await res.json());
+```
+
+</CodeGroup>
+
+Expected response (200):
+
+```json
+{
+  "ok": true,
+  "result": {
+    "echo": "hello from my agent"
+  }
+}
+```
+
+✅ If your message is echoed back, your request format is correct.
+
+## Step 4: Discover Available Tools
+
+List all tools and their billing status:
+
+<CodeGroup>
+
+```bash curl
+curl -s https://agent.asgcompute.com/mcp/capabilities \
+  | jq '.tools[] | {name, status, billable}'
+```
+
+```python Python
+import requests
+
+r = requests.get("https://agent.asgcompute.com/mcp/capabilities")
+for tool in r.json().get("tools", []):
+    print(f"{tool['name']:30} billable={tool.get('billable', 'N/A')}")
+```
+
+```typescript TypeScript
+const res = await fetch('https://agent.asgcompute.com/mcp/capabilities');
+const data = await res.json();
+for (const tool of data.tools) {
+  console.log(`${tool.name.padEnd(30)} billable=${tool.billable}`);
+}
+```
+
+</CodeGroup>
+
+## Step 5: Make a Paid Call
+
+Call a billable tool. If you have pre-funded balance, this returns `200` with the result immediately. If no balance, you get `402` with a quote.
+
+<CodeGroup>
+
+```bash curl
 curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
   -H "Authorization: Bearer $ASG_API_KEY" \
   -H "Content-Type: application/json" \
@@ -54,7 +200,94 @@ curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
     "tool": "inference_chat",
     "params": {
       "model": "openai/gpt-4o-mini",
-      "messages": [{"role":"user","content":"Hello"}]
+      "messages": [{"role":"user","content":"Hello!"}]
+    }
+  }'
+```
+
+```python Python
+import requests, os
+
+ASG = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
+
+r = requests.post(ASG, json={
+    "tool": "inference_chat",
+    "params": {
+        "model": "openai/gpt-4o-mini",
+        "messages": [{"role": "user", "content": "Hello!"}]
+    }
+}, headers={
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+})
+data = r.json()
+# 402 → data["quote"]["quote_id"], data["step_id"]
+# 200 → data["result"]["content"]  (if balance-funded)
+print(r.status_code, data)
+```
+
+```typescript TypeScript
+const ASG = 'https://agent.asgcompute.com/v1/mcp/tools/call';
+const API_KEY = process.env.ASG_API_KEY!;
+
+const res = await fetch(ASG, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    tool: 'inference_chat',
+    params: {
+      model: 'openai/gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Hello!' }],
+    },
+  }),
+});
+const data = await res.json();
+// 402 → data.quote.quote_id, data.step_id
+// 200 → data.result.content  (if balance-funded)
+console.log(res.status, data);
+```
+
+</CodeGroup>
+
+**If 200 — Success!** The result is in `data.result.content`.
+
+**If 402 — Payment Required:**
+
+```json
+{
+  "code": "PAYMENT_REQUIRED",
+  "quote": {
+    "quote_id": "abc123",
+    "amount_usdc_microusd": 10000
+  },
+  "payment_instructions": {
+    "network": "solana-mainnet",
+    "pay_to": "<treasury_ata>",
+    "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  },
+  "step_id": "step_xyz"
+}
+```
+
+## Step 6: Pay and Retry
+
+Send USDC on-chain, then retry with proof:
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
+  -H "Authorization: Bearer $ASG_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "inference_chat",
+    "params": {
+      "model": "openai/gpt-4o-mini",
+      "messages": [{"role":"user","content":"Hello!"}]
     },
     "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
     "payment_proof": {
@@ -68,20 +301,129 @@ curl -X POST https://agent.asgcompute.com/v1/mcp/tools/call \
   }'
 ```
 
-## Active vs Roadmap
+```python Python
+import requests, os
 
-- ✅ Active: `inference_chat`, `inference_embeddings`, `optify_vram_estimate`, `sandbox_execute`
-- 🔧 Upgrading: `serverless_deploy`, `serverless_invoke` (Q1 2026)
-- 🔜 Coming Soon: `gpu_provision`, `gpu_heartbeat`, `gpu_terminate` (Q1 2026)
-- 🔜 Coming Soon: `rag_query`, `rag_ingest` (Q2 2026)
+ASG = "https://agent.asgcompute.com/v1/mcp/tools/call"
+API_KEY = os.environ["ASG_API_KEY"]
 
-See the full [Tool Availability](/guide/tool-availability) page for details.
+r = requests.post(ASG, json={
+    "tool": "inference_chat",
+    "params": {
+        "model": "openai/gpt-4o-mini",
+        "messages": [{"role": "user", "content": "Hello!"}]
+    },
+    "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
+    "payment_proof": {
+        "tx_ref": "<solana_tx_signature>",
+        "amount_usdc": "0.010000",
+        "memo": "<step_id>:<quote_id>:1",
+        "quote_id": "<quote_id>",
+        "step_id": "<step_id>",
+        "network": "solana-mainnet"
+    }
+}, headers={
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+})
+print(r.json())
+```
+
+```typescript TypeScript
+const ASG = 'https://agent.asgcompute.com/v1/mcp/tools/call';
+const API_KEY = process.env.ASG_API_KEY!;
+
+const res = await fetch(ASG, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    tool: 'inference_chat',
+    params: {
+      model: 'openai/gpt-4o-mini',
+      messages: [{ role: 'user', content: 'Hello!' }],
+    },
+    idempotency_key: '550e8400-e29b-41d4-a716-446655440000',
+    payment_proof: {
+      tx_ref: '<solana_tx_signature>',
+      amount_usdc: '0.010000',
+      memo: '<step_id>:<quote_id>:1',
+      quote_id: '<quote_id>',
+      step_id: '<step_id>',
+      network: 'solana-mainnet',
+    },
+  }),
+});
+console.log(await res.json());
+```
+
+</CodeGroup>
+
+<Tip>
+**Faster path:** Deposit USDC via [Console → Balance](https://agent.asgcompute.com/console/#/console/balance) first. Then paid tool calls deduct from your balance automatically — no per-call on-chain transactions needed.
+</Tip>
+
+## Available Tools
+
+| Tool | Status | Billable | Notes |
+|------|--------|----------|-------|
+| `get_status` | ✅ Active | **Free** | System status + balance |
+| `echo` | ✅ Active | **Free** | Validate auth + payload |
+| `inference_chat` | ✅ Active | Paid | GPT-4o, Claude, Gemini |
+| `inference_embeddings` | ✅ Active | Paid | Text embeddings |
+| `sandbox_execute` | ✅ Active | Paid | Python code execution |
+| `optify_vram_estimate` | ✅ Active | Paid | GPU memory estimation |
+| `serverless_invoke` | 🔧 Beta | Paid | Function invocation |
+| `gpu_provision` | 🔜 Q2 2026 | — | GPU provisioning |
+
+See [Tool Availability](/guide/tool-availability) for the full catalog.
+
+## MCP Integration
+
+For agents using the [Model Context Protocol](https://modelcontextprotocol.io/), connect directly:
+
+```json
+{
+  "mcpServers": {
+    "asg": {
+      "url": "https://agent.asgcompute.com/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "Authorization": "Bearer sk-agent-YOUR_KEY"
+      }
+    }
+  }
+}
+```
+
+Works with Claude Desktop, Cursor, Windsurf, and any MCP-compatible client.
 
 ## Error Codes
 
-| Status | Meaning |
-|--------|---------|
-| 401 | Invalid API key |
-| 402 | Payment required |
-| 403 | Forbidden |
-| 429 | Rate limited |
+| Status | Code | Meaning |
+|--------|------|---------|
+| 200 | — | Success |
+| 401 | `UNAUTHORIZED` | Invalid or missing API key |
+| 402 | `PAYMENT_REQUIRED` | Deposit or pay to continue |
+| 403 | `FORBIDDEN` | Scope not authorized |
+| 429 | `RATE_LIMITED` | Too many requests |
+| 500 | — | Server error (retry with idempotency key) |
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="SDK Examples" icon="code" href="/sdk/examples">
+    TypeScript and Python code examples
+  </Card>
+  <Card title="Payment Flow" icon="credit-card" href="/guide/payment-flow">
+    Complete payment lifecycle guide
+  </Card>
+  <Card title="Pricing" icon="tag" href="/billing/pricing">
+    Service pricing details
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/guide/architecture">
+    How ASG works under the hood
+  </Card>
+</CardGroup>
