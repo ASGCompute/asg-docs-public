@@ -5,62 +5,45 @@ description: "Current status of all ASG Agent Cloud tools"
 
 # Tool Availability
 
-<Warning>
-**⚠️ Mainnet Only** — All payments use **Solana mainnet USDC**. There is no devnet or testnet mode.
-</Warning>
+Real-time tool status from the production gateway. Use `get_status` or the capabilities endpoint to verify at any time.
 
-Check the current status of all ASG tools below. Only tools marked **✅ Available** are active in production.
+<Tip>
+**Two free tools** — `get_status` and `echo` — require no payment. Use them to test authentication and connectivity before depositing funds.
+</Tip>
 
-## Status Overview
+## Active Tools
 
-| Tool | Description | Status | ETA |
-|:-----|:------------|:-------|:----|
-| `inference_chat` | AI completions with 100+ models | ✅ Available | — |
-| `inference_embeddings` | Text embeddings | ✅ Available | — |
-| `sandbox_execute` | Isolated code execution | ✅ Available | — |
-| `optify_vram_estimate` | Estimate VRAM requirements | ✅ Available | — |
-| `billing_get_receipt` | Get receipt details | ✅ Available | — |
-| `serverless_deploy` | Deploy serverless functions | 🔧 Upgrading | Q1 2026 |
-| `serverless_invoke` | Invoke serverless functions | 🔧 Upgrading | Q1 2026 |
-| `serverless_cancel` | Cancel serverless jobs | 🔧 Upgrading | Q1 2026 |
-| `gpu_provision` | Provision dedicated GPU pod | 🔜 Coming Soon | Q1 2026 |
-| `gpu_heartbeat` | Extend GPU lease | 🔜 Coming Soon | Q1 2026 |
-| `gpu_extend` | Extend GPU runtime | 🔜 Coming Soon | Q1 2026 |
-| `gpu_status` | Check GPU pod status | 🔜 Coming Soon | Q1 2026 |
-| `gpu_terminate` | Terminate GPU pod | 🔜 Coming Soon | Q1 2026 |
-| `rag_query` | Query knowledge bases | 🔜 Coming Soon | Q2 2026 |
-| `rag_ingest` | Ingest documents | 🔜 Coming Soon | Q2 2026 |
-| `rag_delete` | Delete documents | 🔜 Coming Soon | Q2 2026 |
+These tools are live in production and callable via the API:
 
-## Status Legend
+| Tool | Description | Billable | Status |
+|:-----|:------------|:---------|:-------|
+| `inference_chat` | AI completions with 100+ models | ✅ Yes | ✅ Available |
+| `optify_vram_estimate` | Estimate VRAM requirements for GPU pods | ✅ Yes | ✅ Available |
+| `sandbox_execute` | Execute code in secure isolated environment | ✅ Yes | ✅ Available |
+| `sandbox_cancel` | Cancel a running sandbox execution | ❌ No | ✅ Available |
+| `get_status` | System status, version, and agent balance | ❌ No | ✅ Available |
+| `echo` | Echo back params — validate auth & connectivity | ❌ No | ✅ Available |
 
-| Icon | Meaning |
-|:-----|:--------|
-| ✅ Available | Active in production, ready to use |
-| 🔧 Upgrading | Temporarily unavailable, being upgraded |
-| 🔜 Coming Soon | On the roadmap, not yet deployed |
+## Roadmap
 
-## Live Discovery
+| Tool | Description | Status |
+|:-----|:------------|:-------|
+| `serverless_deploy` | Deploy serverless functions | 🔧 Upgrading |
+| `serverless_invoke` | Invoke serverless functions | 🔧 Upgrading |
+| `serverless_cancel` | Cancel serverless jobs | 🔧 Upgrading |
+| `gpu_provision` | Provision dedicated GPU pod | 🔜 Coming Soon |
+| `gpu_heartbeat` | Extend GPU lease | 🔜 Coming Soon |
+| `gpu_extend` | Extend GPU runtime | 🔜 Coming Soon |
+| `gpu_status` | Check GPU pod status | 🔜 Coming Soon |
+| `gpu_terminate` | Terminate GPU pod | 🔜 Coming Soon |
+| `rag_query` | Query knowledge bases | 🔜 Coming Soon |
+| `rag_ingest` | Ingest documents | 🔜 Coming Soon |
+| `rag_delete` | Delete documents | 🔜 Coming Soon |
 
-You can always check the latest tool status via the capabilities endpoint:
+## Check Live Status
+
+Query the capabilities endpoint to get the current tool list directly from the gateway:
 
 ```bash
-curl -s https://agent.asgcompute.com/mcp/capabilities | jq '.tools[] | {name, status}'
+curl -s https://agent.asgcompute.com/mcp/capabilities | jq '.tools[] | {name, status, billable}'
 ```
-
-## Next Steps
-
-<CardGroup cols={2}>
-  <Card title="Quickstart" icon="rocket" href="/guide/quickstart">
-    Call your first tool in under 5 minutes
-  </Card>
-  <Card title="Payment Flow" icon="credit-card" href="/guide/payment-flow">
-    Learn the 402 payment flow
-  </Card>
-  <Card title="Inference" icon="brain" href="/services/inference">
-    Explore the inference service
-  </Card>
-  <Card title="Pricing" icon="tag" href="/billing/pricing">
-    Detailed pricing for all services
-  </Card>
-</CardGroup>

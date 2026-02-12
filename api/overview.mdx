@@ -7,10 +7,19 @@ description: "ASG Agent Cloud API Reference"
 
 ASG Agent Cloud uses the **Model Context Protocol (MCP)** for all tool interactions.
 
-## Endpoint
+## Endpoints
+
+ASG exposes two endpoints — use whichever matches your integration:
+
+| Endpoint | Protocol | Use case |
+|:---------|:---------|:---------|
+| `/v1/mcp/tools/call` | **REST** (recommended) | Quickstart, most integrations |
+| `/mcp` | **JSON-RPC 2.0** | MCP-native agent frameworks |
+
+Base URL:
 
 ```
-https://agent.asgcompute.com/mcp
+https://agent.asgcompute.com
 ```
 
 ## Protocol
@@ -45,7 +54,13 @@ All requests use **JSON-RPC 2.0** over HTTP POST.
 
 ## Authentication
 
-Authentication is via Solana wallet signature in the payment proof.
+All requests require an API key via Bearer token:
+
+```bash
+Authorization: Bearer <api_key>
+```
+
+Create API keys in the [Console](https://agent.asgcompute.com/console). See [Authentication](/security/authentication) for details.
 
 ## Response Format
 
@@ -83,22 +98,19 @@ Authentication is via Solana wallet signature in the payment proof.
 }
 ```
 
-## Tools
+## Active Tools
 
-| Tool | Description | Status |
-|:-----|:------------|:-------|
-| `inference_chat` | AI completions | ✅ Available |
-| `inference_embeddings` | Text embeddings | ✅ Available |
-| `sandbox_execute` | Execute code | ✅ Available |
-| `billing_get_receipt` | Get receipt details | ✅ Available |
-| `serverless_deploy` | Deploy functions | 🔧 Upgrading |
-| `serverless_invoke` | Run async jobs | 🔧 Upgrading |
-| `gpu_provision` | Rent GPU pods | 🔜 Coming Soon |
-| `gpu_heartbeat` | Extend GPU lease | 🔜 Coming Soon |
-| `gpu_terminate` | End GPU lease | 🔜 Coming Soon |
+| Tool | Description | Billable | Status |
+|:-----|:------------|:---------|:-------|
+| `inference_chat` | AI completions with 100+ models | Yes | ✅ Available |
+| `optify_vram_estimate` | Estimate VRAM requirements | Yes | ✅ Available |
+| `sandbox_execute` | Execute code in isolation | Yes | ✅ Available |
+| `sandbox_cancel` | Cancel running sandbox | No | ✅ Available |
+| `get_status` | System status + balance | No | ✅ Available |
+| `echo` | Validate auth + connectivity | No | ✅ Available |
 
 <Note>
-See the full [Tool Availability](/guide/tool-availability) page for details and ETAs.
+See [Tool Availability](/guide/tool-availability) for the full catalog and roadmap.
 </Note>
 
 ## Rate Limits

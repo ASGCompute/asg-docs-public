@@ -38,12 +38,12 @@ Multiple layers of security:
 
 ## Authentication
 
-Authentication is via Solana wallet signature:
-1. Sign a message with your wallet
-2. Include signature in requests
-3. ASG verifies on-chain
+Authentication is via API key:
+1. Create an API key in the [Console](https://agent.asgcompute.com/console)
+2. Include `Authorization: Bearer <api_key>` in every request
+3. Your Solana wallet is used only for payments — not for auth
 
-No API keys, no passwords, no sessions.
+No passwords, no sessions. See [Authentication](/security/authentication) for details.
 
 ## Infrastructure
 
@@ -55,7 +55,7 @@ No API keys, no passwords, no sessions.
 ## Rate Limiting
 
 Built-in protection against abuse:
-- Per-wallet request limits
+- Per-key request limits
 - Concurrent execution limits
 - Budget caps per run
 
@@ -63,7 +63,7 @@ Built-in protection against abuse:
 
 Found a vulnerability? Please report responsibly.
 
-<Card title="Security Policy" icon="shield" href="/SECURITY.md">
+<Card title="Security Policy" icon="shield" href="/security/disclosure">
   Read our full security disclosure policy
 </Card>
 
@@ -79,7 +79,7 @@ Found a vulnerability? Please report responsibly.
 
 <CardGroup cols={2}>
   <Card title="Authentication" icon="key" href="/security/authentication">
-    Wallet-based authentication
+    API-key authentication
   </Card>
   <Card title="Data Handling" icon="database" href="/security/data-handling">
     How we handle your data

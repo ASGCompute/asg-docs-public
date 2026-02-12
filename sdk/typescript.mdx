@@ -9,6 +9,14 @@ description: "Integrating ASG Agent Cloud with TypeScript"
 An official TypeScript SDK is on the roadmap. For now, use the REST API directly with `fetch()`. The examples below show you how.
 </Note>
 
+<Tip>
+**Which endpoint?** ASG exposes two protocols:
+- **REST** (`/v1/mcp/tools/call`) — recommended for quickstart and most integrations. See [Python SDK](/sdk/python) for REST examples.
+- **JSON-RPC** (`/mcp`) — for MCP-native agent frameworks. The examples on this page use JSON-RPC since TypeScript is the primary MCP SDK language.
+
+Both require the same `Authorization: Bearer <api_key>` header.
+</Tip>
+
 ## Quick Start
 
 ```typescript

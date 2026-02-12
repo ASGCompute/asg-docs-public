@@ -104,6 +104,7 @@
                 "security/overview",
                 "security/disclosure",
                 "security/authentication",
+                "security/agent-auth-contract",
                 "security/data-handling"
             ]
         },

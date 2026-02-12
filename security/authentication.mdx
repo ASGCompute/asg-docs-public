@@ -1,79 +1,112 @@
 ---
 title: "Authentication"
-description: "Wallet-based authentication"
+description: "API-key authentication for ASG Agent Cloud"
 ---
 
 # Authentication
 
-ASG uses Solana wallet signatures for authentication — no API keys or passwords.
+ASG uses **API keys** for authentication. Create a key in the [Console](https://agent.asgcompute.com/console), set it as an environment variable, and include it as a Bearer token in every request.
 
-## How It Works
+## Quick Setup
 
-```mermaid
-sequenceDiagram
-    participant Wallet
-    participant Client
-    participant ASG
-    participant Solana
-    
-    Client->>Wallet: Request signature
-    Wallet-->>Client: Signed message
-    Client->>ASG: Request + signature
-    ASG->>Solana: Verify signature
-    Solana-->>ASG: Valid
-    ASG-->>Client: Authenticated response
+1. **Create an API key** at [agent.asgcompute.com/console](https://agent.asgcompute.com/console) → API Keys → Create Key
+2. **Set your environment variable:**
+
+```bash
+export ASG_API_KEY="sk-agent-..."
 ```
 
-## Benefits
+3. **Include in requests:**
 
-| Traditional Auth | Wallet Auth |
-|:-----------------|:------------|
-| API keys can leak | Private key stays local |
-| Keys need management | Wallet handles security |
-| Central revocation | Self-sovereign |
-| Separate identity | Same identity as payments |
+```bash
+Authorization: Bearer $ASG_API_KEY
+```
 
-## Implementation
+## Verify Connectivity
 
-### TypeScript SDK
+Test with a free tool — no payment required:
 
-The SDK handles authentication automatically:
+<CodeGroup>
 
-```typescript
-import { ASGClient } from '@asgcompute/sdk';
+```bash curl
+curl -s https://agent.asgcompute.com/v1/mcp/tools/call \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ASG_API_KEY" \
+  -d '{"tool": "get_status", "arguments": {}}'
+```
 
-const client = new ASGClient({
-  wallet: yourKeypair,
-  // Authentication is automatic
+```python Python
+import os, requests
+
+response = requests.post(
+    "https://agent.asgcompute.com/v1/mcp/tools/call",
+    headers={
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {os.environ['ASG_API_KEY']}",
+    },
+    json={"tool": "get_status", "arguments": {}},
+)
+print(response.json())
+```
+
+```typescript TypeScript
+const response = await fetch('https://agent.asgcompute.com/v1/mcp/tools/call', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${process.env.ASG_API_KEY}`
+  },
+  body: JSON.stringify({ tool: 'get_status', arguments: {} })
 });
+console.log(await response.json());
 ```
 
-### Manual Authentication
+</CodeGroup>
 
-For direct API access, include payment signature:
-
-```json
-{
-  "params": {
-    "_meta": {
-      "payment": {
-        "tx_signature": "your-solana-tx-signature"
-      }
-    }
-  }
-}
-```
-
-## Security Considerations
+## Key Security
 
 <Warning>
-**Never share your private key.** ASG will never ask for it. Only wallet signatures are sent over the network.
+**Never share your API key.** Treat `sk-agent-*` keys like passwords. If compromised, revoke immediately in the Console and create a new key.
 </Warning>
 
-## Wallet Support
+| Practice | Recommendation |
+|:---------|:--------------|
+| Storage | Environment variable or secrets manager — never in source code |
+| Rotation | Rotate keys periodically; revoke unused keys |
+| Scope | Each agent/integration should use its own key |
+| Monitoring | Check usage in the Console to detect anomalies |
 
-Compatible with any Solana wallet:
+## Auth vs. Payment
+
+ASG separates **authentication** (who you are) from **payment** (how you pay):
+
+| Concern | Mechanism |
+|:--------|:----------|
+| Identity | API key via `Authorization: Bearer <api_key>` |
+| Payment | Solana USDC via 402 quote → on-chain transfer → `X-Payment` header |
+
+Free tools (`get_status`, `echo`, `sandbox_cancel`) require only authentication — no payment step.
+
+## MCP-Native Integration
+
+For MCP-compatible agent frameworks, use the JSON-RPC endpoint (`/mcp`) with the same Bearer header:
+
+```bash
+curl -s https://agent.asgcompute.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ASG_API_KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  }'
+```
+
+## Wallet Integration
+
+Your Solana wallet is used for **payments only** — not for authentication. Compatible wallets:
+
 - Phantom
 - Solflare
 - Backpack
-- CLI wallets
+- CLI wallets (Solana CLI)

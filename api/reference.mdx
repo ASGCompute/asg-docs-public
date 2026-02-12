@@ -21,11 +21,13 @@ https://agent.asgcompute.com
 
 ## Authentication
 
-All requests require Bearer authentication with a Solana wallet signature:
+All requests require Bearer authentication with an API key (created in the [Console](https://agent.asgcompute.com/console)):
 
 ```bash
-Authorization: Bearer <wallet-signature>
+Authorization: Bearer <api_key>
 ```
+
+API keys use the `sk-agent-*` prefix. See [Authentication](/security/authentication) for setup details.
 
 ## Endpoints
 
