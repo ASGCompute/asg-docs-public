@@ -1,39 +1,45 @@
 ---
 title: "ASG GPU"
-description: "Dedicated GPU pods for AI workloads"
+description: "Dedicated GPU pods for AI workloads — Coming Soon"
+sidebarTitle: "GPU"
 ---
 
 # ASG GPU
 
 <Warning>
-**🔜 Coming Soon** — GPU provisioning is on the roadmap. The tools described below are planned but not yet active. See [Tool Availability](/guide/tool-availability) for current status.
+**🔜 Coming Soon** — Dedicated GPU provisioning is on the roadmap. The tools described below are planned but not yet active. See [Tool Availability](/guide/tool-availability) for current status.
 </Warning>
 
-Rent dedicated GPU instances on-demand with per-second billing.
+Rent dedicated GPU instances on-demand with per-second billing via MCP tool calls.
 
 ## Planned Capabilities
 
-- **H100, A100, RTX 4090** — Premium GPUs
-- **Per-second billing** — No hourly minimums
-- **Instant provisioning** — Target <30 seconds
-- **SSH access** — Full control of your pod
+- **H100 80 GB, A100 80 GB, RTX 4090 24 GB** — Premium GPUs for every workload
+- **Per-second billing** — No hourly minimums, pay only for what you use
+- **Instant provisioning** — Target &lt;30 seconds from tool call to SSH
+- **SSH access** — Full root control of your pod
+- **Multi-GPU** — Scale to 8× GPU nodes for large training runs
 
 ## Planned Tools
 
-| Tool | Description |
-|:-----|:------------|
-| `gpu_provision` | Provision a GPU pod |
-| `gpu_heartbeat` | Extend a lease |
-| `gpu_terminate` | Terminate a pod |
+| Tool | Description | Status |
+|:-----|:------------|:-------|
+| `gpu_provision` | Provision a GPU pod | 🔜 Coming Soon |
+| `gpu_heartbeat` | Extend a lease | 🔜 Coming Soon |
+| `gpu_terminate` | Terminate a pod | 🔜 Coming Soon |
 
-## Currently Active Tools
+## Available Today
 
-While GPU is not yet available, you can use these tools today:
+While GPU provisioning is coming soon, you can use these tools right now:
 
-- **`inference_chat`** — AI completions with 100+ models
-- **`sandbox_execute`** — Isolated code execution
+- **[`inference_chat`](/services/inference)** — AI completions with 100+ models
+- **[`sandbox_execute`](/services/sandbox)** — Isolated code execution
 - **`optify_vram_estimate`** — Estimate VRAM requirements for models
 
 ## Pricing
 
 GPU pricing will be announced when the service launches. See [Pricing](/billing/pricing).
+
+<Info>
+**Interested in early access?** Contact us at [hello@asgcompute.com](mailto:hello@asgcompute.com) to join the GPU waitlist.
+</Info>
